@@ -18,7 +18,7 @@ class RDBConnection(Connection):
         uri = self.datasource.uri
         if uri is None:
             authen = None
-            uripart = self.datasource.host + ':' + self.datasource.port + '/' + self.datasource.db
+            uripart = self.datasource.host + ':' + str(self.datasource.port) + '/' + self.datasource.db
             if self.datasource.user is not None:
                 authen = self.datasource.user
             if authen is not None and self.datasource.password is not None:
