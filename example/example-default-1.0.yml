@@ -1,0 +1,30 @@
+connection:
+  # name of the connection
+  rdb-conn:
+    driver: rdb
+    protocol: postgresql
+    host: 127.0.0.1
+    port: 5432
+    user: nameit
+    password: changeme
+    db: yourdb
+    uri: postgresql://nameit:changeme@127.0.0.1:5432/yourdb
+  elastic-conn:
+    driver: elastic
+    protocol: http
+    host: 127.0.0.1
+    port: 9200
+    user: elastic
+    password: changeme
+    db: example
+    uri: http://elastic:changeme@127.0.0.1:9200/
+scheduler:
+  driver: 'azkaban'
+  azkaban:
+    host: "http://127.0.0.1:8081"
+    username: azkaban
+    password: azkaban
+    project: TestProject
+    notifymail: "yourmail@yourdomain.com"
+    cmd: "parade exec {task}"
+

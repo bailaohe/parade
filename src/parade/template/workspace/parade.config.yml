@@ -1,0 +1,51 @@
+connection:
+  # name of the connection
+  pg-conn:
+    # connection driver
+    driver: rdb
+    # protocol of the connection
+    protocol: postgresql
+    # host of the connection
+    host: 127.0.0.1
+    # port to talk
+    port: 5432
+    # username authenticated
+    user: nameit
+    # password authenticated
+    password: changeme
+    # the namespace to use
+    db: yourdb
+    # the complete URI of the connection
+    # if this is set, use it as preferred
+    uri: postgresql://nameit:changeme@127.0.0.1:5432/yourdb
+    # data to consume when writing to the connection
+    input: dataframe
+    # data to produce when writing to the connection
+    output: dataframe
+  mysql-conn:
+    driver: rdb
+    protocol: mysql
+    host: 127.0.0.1
+    port: 3306
+    user: nameit
+    password: changeit
+    db: yourdb
+    uri: mysql://nameit:changeit@127.0.0.1:3306/yourdb
+    # input/output data can be of different type
+    # as long as the connection supports them
+    input: dict
+    output: dataframe
+  elastic-conn:
+    driver: elastic
+    protocol: http
+    host: 127.0.0.1
+    port: 9200
+    user: elastic
+    password: changeme
+    db: tuda
+    uri: http://elastic:changeme@127.0.0.1:9200/
+    # connection can only handle input or output
+    output: dataframe
+scheduler:
+  driver: parade
+

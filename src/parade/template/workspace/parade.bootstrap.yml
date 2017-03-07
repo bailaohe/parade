@@ -1,0 +1,8 @@
+workspace:
+  name: ${project_name}
+config:
+  name: ${project_name}
+  driver: yaml
+  profile: default
+  version: 1.0
+  uri: "{name}-{profile}-{version}.yml"

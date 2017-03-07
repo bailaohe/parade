@@ -1,0 +1,73 @@
+from .. import Context
+
+
+class SparkContext(Context):
+    """
+    The executor context backed by the spark & spark sql.
+    """
+
+    def __init__(self, conf):
+        Context.__init__(self, conf)
+        import os
+        import sys
+        from os import listdir
+        from os.path import isfile, join
+
+        # Initialization of the spark context requires some extra java libs
+        ext_lib = os.environ.get('EXT_LIB', None)
+        if ext_lib is None:
+            raise RuntimeError("Environment [EXT_LIB] not set!")
+
+        # These java libs have to be visible by spark so we add them into spark's classpath
+        spark_home = os.environ.get('SPARK_HOME', None)
+        if spark_home is None:
+            raise RuntimeError("Environment [SPARK_HOME] not set!")
+
+        jars = [join(ext_lib, f) for f in listdir(ext_lib) if isfile(join(ext_lib, f)) if f.endswith(".jar")]
+        os.environ['SPARK_CLASSPATH'] = ":".join(jars)
+
+        # supports = load_drivers()
+
+        app_name = '** PARADE **'
+        spark_master = kwargs['spark_master'] if 'spark_master' in kwargs else 'local[*]'
+        py4j_version = kwargs['py4j_version'] if 'py4j_version' in kwargs else '0.9'
+
+        # Add pyspark to sys.path
+        sys.path.insert(0, spark_home + "/python")
+
+        # Add the py4j to the path.
+        # You may need to change the version number to match your install
+        sys.path.insert(0, os.path.join(spark_home, 'python/lib/py4j-' + py4j_version + '-src.zip'))
+
+        from pyspark import SparkContext
+        from pyspark import SparkConf
+        from pyspark.sql import SQLContext
+
+        # Initialize spark conf/context/sqlContext
+        self.conf = SparkConf().setMaster(spark_master).setAppName(app_name)
+        self.sc = SparkContext(conf=self.conf)
+        self.context = SQLContext(self.sc)
+
+    def load_table(self, table, conn, **kwargs):
+        conn = self.get_datasource(conn_key)
+        spark_conn = self.context.read.format('jdbc').options(
+                url=conn.uri,
+                driver=conn.attributes['driver_class'],
+                user=conn.user,
+                password=conn.password)
+        df = spark_conn.load(table)
+
+        # If the caller provides the alias of the loaded data frame,
+        # we register it as a temporary table in spark meta store
+        if 'alias' in kwargs and kwargs['alias'] is not None:
+            alias = kwargs['alias']
+            df.registerTempTable(alias)
+
+        return df.to_pandas
+
+    def load_sql(self, sql, conn, **kwargs):
+        import pandas as pd
+        return pd.read_sql_query(sql, con=self.open_conn(conn))
+
+
+Context.supports['spark'] = SparkContext

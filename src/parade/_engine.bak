@@ -1,0 +1,85 @@
+from collections import defaultdict
+
+from .sched import Scheduler
+from .context import Context
+
+from .logging import logger
+
+
+class Engine(object):
+    """
+    An engine to execute etl tasks at runtime. The engine is initialized by an ETL executor context.
+    """
+
+    engine_pool = defaultdict(object)
+
+    @staticmethod
+    def get_instance(name, conf):
+        if name in Engine.engine_pool:
+            return Engine.engine_pool[name]
+
+        engine = Engine(conf)
+        Engine.engine_pool[name] = engine
+        return engine
+
+    def __init__(self, conf):
+        """
+        Initialize the Engine with the executor context
+        :param conf: the config dict of parade engine
+        :return: the initialized engine
+        """
+        self.conf = conf
+        self.context = Context.get_instance(conf['parade.context'])
+        self.scheduler = Scheduler.get_instance(conf['parade.scheduler'])
+        self.task_repo = conf['parade.task.repo']
+        import sys
+        sys.path.insert(0, self.task_repo)
+
+    def execute_task(self, task_key, **kwargs):
+        """
+        Execute a task of a given key
+        :param task_key: the key of the task
+        :param kwargs: the extra arguments to execute the task
+        :return: the task result
+        """
+        try:
+            import importlib
+            task_module = importlib.import_module(task_key)
+            logger.info("Task [{}] loaded".format(task_key))
+            task = task_module.create_task()
+            task.execute(self.context, **kwargs)
+            logger.info("Task [{}] executed".format(task_key))
+            return task.gen_output()
+        except Exception as e:
+            logger.exception("Task [{}] execution failed: {}".format(task_key, str(e)))
+            return None
+
+    def build_flow(self, flow_key, *task_keys):
+        import importlib
+
+        len_keys = len(task_keys)
+        task_key_set = set(task_keys)
+        size_keys = len(task_key_set)
+
+        if len_keys > size_keys:
+            raise RuntimeError("Duplicated tasks specified!")
+
+        task_modules = list(map(lambda task_key: importlib.import_module(task_key).create_task(), task_key_set))
+
+        self.scheduler.update_flow(flow_key, *task_modules)
+
+    def sched_flow(self, flow_key, cron):
+        self.scheduler.schedule_flow(flow_key, cron)
+
+    def list_task(self):
+        import importlib
+        task_modules = []
+        import os
+        for pyfile in os.listdir(self.task_repo):
+            if pyfile == '__init__.py' or pyfile[-3:] != '.py':
+                continue
+            task_module = importlib.import_module(pyfile[:-3]).create_task()
+            task_modules.append(task_module)
+            # del pyfile
+        del os
+        return task_modules
