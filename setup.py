@@ -22,5 +22,6 @@ setup(
                 'parade = parade.cmdline:execute',
             ],
         },
-        url='https://github.com/bailaohe/parade'
+        url='https://github.com/bailaohe/parade',
+        download_url='https://github.com/bailaohe/parade/tarball/0.1',
 )
