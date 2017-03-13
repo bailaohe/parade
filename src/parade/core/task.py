@@ -96,6 +96,8 @@ class Task(object):
         :return:
         """
         checkpoint_conn = context.get_connection(self.checkpoint_conn)
+        checkpoint_conn.init_record_if_absent()
+
         assert isinstance(checkpoint_conn, RDBConnection)
         last_record = checkpoint_conn.last_record(self.name)
         if last_record:

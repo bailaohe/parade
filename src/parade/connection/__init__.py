@@ -54,6 +54,9 @@ class Connection(object):
     def store(self, df, table, **kwargs):
         raise NotImplementedError
 
+    def init_record_if_absent(self):
+        raise NotImplementedError
+
     @property
     def accept(self):
         raise NotImplementedError
