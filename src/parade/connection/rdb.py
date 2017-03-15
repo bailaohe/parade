@@ -1,8 +1,8 @@
 import datetime
 
 import pandas as pd
-from sqlalchemy import create_engine, text, MetaData, Column, types, Index, Table
-from sqlalchemy.sql import func, functions
+from sqlalchemy import create_engine, MetaData, Column, types, Index, Table
+from sqlalchemy.sql import functions
 
 from parade.utils.log import logger
 from . import Connection, Datasource
@@ -55,8 +55,10 @@ class RDBConnection(Connection):
 
     def store(self, df, table, **kwargs):
         assert isinstance(df, pd.DataFrame), "Invalid data type"
-        if_exists = kwargs['if_exists'] if 'if_exists' in kwargs else 'fail'
-        chunksize = kwargs['chunksize'] if 'chunksize' in kwargs else None
+        if_exists = kwargs.get('if_exists', 'fail')
+        chunksize = kwargs.get('chunksize', None)
+        pkey = kwargs.get('pkey', None)
+        indexes = kwargs.get('indexes', [])
         schema = None
         if table.find('.') >= 0:
             toks = table.split('.', 1)
@@ -91,14 +93,22 @@ class RDBConnection(Connection):
             for i in range(0, len(_df), _chunksize):
                 yield df[i:i + _chunksize]
 
+        _conn = self.open()
         for idx, chunk in enumerate(_chunks(df, chunksize)):
-            if_exists_ = if_exists
-            if idx > 0:
-                if_exists_ = 'append'
-            chunk.to_sql(name=table, con=self.open(), index=False, schema=schema, if_exists=if_exists_,
-                         # chunksize=chunksize,
-                         dtype=typehints)
+            if_exists_ = 'append' if idx > 0 else if_exists
+            chunk.to_sql(name=table, con=_conn, index=False, schema=schema, if_exists=if_exists_, dtype=typehints)
             logger.info("Write rows #{}-#{}".format(idx * chunksize, (idx + 1) * chunksize))
+
+        if if_exists == 'replace':
+            if pkey:
+                pkeys = pkey if isinstance(pkey, str) else ','.join(pkey)
+                _conn.execute('ALTER TABLE {} ADD PRIMARY KEY ({})'.format(table, pkeys))
+
+            for index in indexes:
+                index_str = index if isinstance(index, str) else ','.join(index)
+                index_name = index if isinstance(index, str) else '_'.join(index)
+                _conn.execute('ALTER TABLE {} ADD INDEX idx_{} ({})'.format(table, index_name, index_str))
+
 
     def init_record_if_absent(self):
         _conn = self.open()

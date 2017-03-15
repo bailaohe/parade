@@ -205,8 +205,16 @@ class ETLTask(Task):
         return {}
 
     @property
-    def target_index(self):
+    def target_pkey(self):
+        """
+        a string or a string-list to specify the primary key of target
+        :return:
+        """
         return None
+
+    @property
+    def target_indexes(self):
+        return []
 
     def execute_internal(self, context, **kwargs):
         """
@@ -219,13 +227,27 @@ class ETLTask(Task):
 
     def on_commit(self, context, txn_id, **kwargs):
         target_df = self._result
-        if self.target_index:
-            target_df.set_index(self.target_index)
         target_conn = context.get_connection(self.target_conn)
+
+        if self.target_pkey:
+            assert isinstance(self.target_pkey, str) or isinstance(self.target_pkey, tuple),\
+                "target primary key can only be of type string or tuple"
+
+        indexes = []
+        if not self.target_indexes:
+            indexes = []
+        elif isinstance(self.target_indexes, tuple):
+            indexes = [self.target_indexes]
+
+        for index in indexes:
+            assert isinstance(index, str) or isinstance(index, tuple),\
+                "target indexes can only be of type string or tuple"
         target_conn.store(target_df, self.target_table,
                           if_exists=self.target_mode,
                           chunksize=kwargs.get('chunksize', 10000),
-                          typehints=self.target_typehints)
+                          typehints=self.target_typehints,
+                          pkey=self.target_pkey,
+                          indexes=indexes)
 
 
 class SqlETLTask(ETLTask):
