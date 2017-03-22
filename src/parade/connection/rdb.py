@@ -109,11 +109,13 @@ class RDBConnection(Connection):
                 index_name = index if isinstance(index, str) else '_'.join(index)
                 _conn.execute('ALTER TABLE {} ADD INDEX idx_{} ({})'.format(table, index_name, index_str))
 
-
     def init_record_if_absent(self):
         _conn = self.open()
         if not self.task_table.exists(_conn):
-            self.task_table.create(_conn)
+            try:
+                self.task_table.create(_conn)
+            except:
+                pass
 
     def last_record(self, task_name):
         _conn = self.open()

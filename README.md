@@ -94,6 +94,30 @@ You can find much more sub-commands available now. We come to the details of the
 5 directories, 8 files
 ```
 
+At top there are a package named *example* (as we specified) and two yaml files. The package has two sub-packages: 
+
+- *contrib* contains user defined components, such as connection drivers, task schedulers, etc.
+- *task* holds all the data tasks to execute or schedule.
+
+The yaml file *parade.bootstrap.yml* is just a **pointer** to the configuration repo for this workspace. Its content is as follows:
+
+```
+workspace:
+  name: example
+config:
+  name: example
+  driver: yaml
+  profile: default
+  version: 1.0
+  uri: "{name}-{profile}-{version}.yml"
+```
+
+In this example, we use a local yaml file  *example-default-1.0.yml* as the repo. You can implement your own configuration repo and specify it as `config.driver` in *parade.bootstrap.yml*.
+
+
+### Compose Task
+
+
 
 
 	
