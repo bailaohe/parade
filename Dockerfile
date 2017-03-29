@@ -1,7 +1,8 @@
 FROM bailaohe/statoy:flask
 MAINTAINER He Bai <bai.he@outlook.com>
 
-RUN pip3 --no-cache-dir install parade==0.1.4 && cd -
+RUN pip3 --no-cache-dir install parade==0.1.4
+RUN pip3 --no-cache-dir install redis
 
 EXPOSE 5000
 

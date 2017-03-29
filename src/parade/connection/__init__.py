@@ -61,35 +61,6 @@ class Connection(object):
     def accept(self):
         raise NotImplementedError
 
-    """
-        -- mysql dialect
-    CREATE TABLE _task_record (
-        `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-        `task` varchar(64) NOT NULL,
-        `checkpoint` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        `commit_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        `status` int(11) NOT NULL DEFAULT 0, -- 0: running, 1: committed, 2: failed
-        `message` varchar(256) NOT NULL DEFAULT 'OK',
-         PRIMARY KEY (`id`),
-         KEY `idx_task_create` (`task`,`create_time`)
-    );
-
-    -- postgresql dialect
-    CREATE TABLE public._task_record (
-        id SERIAL PRIMARY KEY NOT NULL,
-        task CHARACTER VARYING(64) NOT NULL,
-        checkpoint TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
-        create_time TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
-        commit_time TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
-        update_time TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
-        status INTEGER NOT NULL DEFAULT 0,
-        message CHARACTER VARYING NOT NULL DEFAULT 'OK'::character varying
-    );
-    CREATE INDEX idx_task_create ON _task_record USING BTREE (task, create_time);
-    """
-
     @property
     def can_produce(self):
         raise NotImplementedError
