@@ -238,6 +238,8 @@ class ETLTask(Task):
             indexes = []
         elif isinstance(self.target_indexes, tuple):
             indexes = [self.target_indexes]
+        else:
+            indexes = self.target_indexes
 
         for index in indexes:
             assert isinstance(index, str) or isinstance(index, tuple),\
