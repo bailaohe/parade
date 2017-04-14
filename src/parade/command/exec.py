@@ -15,12 +15,14 @@ class ExecCommand(ParadeCommand):
         engine = Engine(context)
 
         task = kwargs.get('task')
+        force = kwargs.get('force')
         logger.debug('prepare to execute task {}'.format(task))
 
-        engine.execute(task)
+        engine.execute(task, force=force)
 
     def short_desc(self):
         return 'execute a flow or a set of tasks'
 
     def config_parser(self, parser):
+        parser.add_argument('--force', action="store_true", help='force the task to execute')
         parser.add_argument('task', help='the task to execute')

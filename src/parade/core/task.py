@@ -89,7 +89,7 @@ class Task(object):
     #         raise NotImplementedError
     #     return None
 
-    def _start(self, context):
+    def _start(self, context, **kwargs):
         """
         start a checkpoint transaction before executing the task
         :param context:
@@ -109,7 +109,9 @@ class Task(object):
         checkpoint_ts = now_ts - (now_ts - init_ts) % self.checkpoint_round
         self._checkpoint = timestamp_to_datetime(checkpoint_ts).strftime('%Y-%m-%d %H:%M:%S')
 
-        if self._checkpoint > self._last_checkpoint:
+        force = kwargs.get('force', False)
+
+        if self._checkpoint > self._last_checkpoint or force:
             return checkpoint_conn.create_record(self.name, self._checkpoint)
         # 重复执行就直接跳过
         logger.warn('last checkpoint {} indicates the task is already executed, bypass the execution'.format(
@@ -144,7 +146,7 @@ class Task(object):
         :param kwargs:
         :return:
         """
-        txn_id = self._start(context)
+        txn_id = self._start(context, **kwargs)
         try:
             if txn_id:
                 self._result = self.execute_internal(context, **kwargs)
