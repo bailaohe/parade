@@ -14,15 +14,16 @@ class ExecCommand(ParadeCommand):
     def run_internal(self, context, **kwargs):
         engine = Engine(context)
 
-        task = kwargs.get('task')
+        tasks = kwargs.get('task')
         force = kwargs.get('force')
-        logger.debug('prepare to execute task {}'.format(task))
+        logger.debug('prepare to execute task {}'.format(tasks))
 
-        engine.execute(task, force=force)
+        for task in tasks:
+            engine.execute(task, force=force)
 
     def short_desc(self):
         return 'execute a flow or a set of tasks'
 
     def config_parser(self, parser):
         parser.add_argument('--force', action="store_true", help='force the task to execute')
-        parser.add_argument('task', help='the task to execute')
+        parser.add_argument('task', nargs='*', help='the task to schedule')
