@@ -55,17 +55,17 @@ Enter the workspace directory, and re-check usage again:
 
 ```bash
 > parade -h
-usage: parade [-h] {server,init,sched,gentask,exec} ...
+usage: parade [-h] {init,gentask,exec,mkdag,server} ...
 
 The CLI of parade engine.
 
 positional arguments:
-  {server,init,sched,gentask,exec}
-    server              start a parade api server
+  {init,gentask,exec,mkdag,server}
     init                init a workspace to work with
-    sched               schedule a flow with a set of tasks
     gentask             generate a task skeleton with specified type
     exec                execute a flow or a set of tasks
+    mkdag               create a dag (flow) with a set of tasks
+    server              start a parade api server
 
 optional arguments:
   -h, --help            show this help message and exit
