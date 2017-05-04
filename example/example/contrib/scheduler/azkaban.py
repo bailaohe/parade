@@ -2,7 +2,7 @@
 
 import requests
 from parade.utils.log import logger
-from parade.scheduler import Scheduler
+from parade.dagstore import DAGStore
 from parade.core.task import Task
 
 
@@ -24,10 +24,10 @@ class Noop(Task):
         return None
 
 
-class AzkabanScheduler(Scheduler):
+class AzkabanDAGStore(DAGStore):
     def __init__(self, context):
-        Scheduler.__init__(self, context)
-        conf = context.conf['scheduler']
+        DAGStore.__init__(self, context)
+        conf = context.conf['dagstore']
         self.host = conf['azkaban.host']
         self.username = conf['azkaban.username']
         self.password = conf['azkaban.password']
@@ -101,7 +101,7 @@ class AzkabanScheduler(Scheduler):
 
     def create_flow(self, flow_name, *tasks):
         tasks = [self.context.task_dict[key] for key in tasks]
-        forests = Scheduler.parse_forests(*tasks)
+        forests = DAGStore.parse_forests(*tasks)
         flow_end = Noop(flow_name, *map(lambda t: t.name, forests))
 
         import os
@@ -165,16 +165,16 @@ class AzkabanScheduler(Scheduler):
     def drop_flow(self, flow_name):
         pass
 
-    def schedule(self, *tasks, cron=None, flow_name=None):
+    def create(self, *tasks, cron=None, dag_key=None):
 
-        self.create_flow(flow_name, *tasks)
+        self.create_flow(dag_key, *tasks)
 
         params = self.init_param()
         project_id = self.get_project_id()
         params.update({
             "ajax": "scheduleFlow",
             "projectName": self.project,
-            "flow": flow_name,
+            "flow": dag_key,
             "projectId": project_id,
             "scheduleDate": ""
         })
@@ -189,7 +189,7 @@ class AzkabanScheduler(Scheduler):
             if 'error' in resp:
                 raise RuntimeError(resp['error'])
 
-    def unsched(self, flow_name):
+    def delete(self, flow_name):
         sched_ids = self.get_schedule_ids(flow_name)
         params = self.init_param()
         params.update({

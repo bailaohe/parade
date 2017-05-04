@@ -2,9 +2,9 @@ from ..core.task import Task
 from ..utils.log import logger
 
 
-class Scheduler(object):
+class DAGStore(object):
     """
-    The scheduler to support task-flow scheduling
+    The dagstore to support task-flow scheduling
     """
 
     @staticmethod
@@ -27,16 +27,16 @@ class Scheduler(object):
         logger.debug('Task forests generated [{}]'.format(', '.join(map(lambda x: x.name, forests))))
         return forests
 
-    def schedule(self, *tasks, cron=None, flow_name=None):
+    def create(self, *tasks, cron=None, dag_key=None):
         """
         schedule the task-flow
-        :param flow_name: the flow name
+        :param dag_key: the flow name
         :param cron: the cron string to schedule the flow
         :return:
         """
-        raise NotImplemented
+        raise NotImplementedError
 
-    def unsched(self, flow_name):
+    def delete(self, flow_name):
         """
         unschedule the task-flow
         :param flow_name: the flow name

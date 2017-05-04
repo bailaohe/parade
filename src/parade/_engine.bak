@@ -30,7 +30,7 @@ class Engine(object):
         """
         self.conf = conf
         self.context = Context.get_instance(conf['parade.context'])
-        self.scheduler = Scheduler.get_instance(conf['parade.scheduler'])
+        self.dagstore = Scheduler.get_instance(conf['parade.dagstore'])
         self.task_repo = conf['parade.task.repo']
         import sys
         sys.path.insert(0, self.task_repo)
@@ -66,10 +66,10 @@ class Engine(object):
 
         task_modules = list(map(lambda task_key: importlib.import_module(task_key).create_task(), task_key_set))
 
-        self.scheduler.update_flow(flow_key, *task_modules)
+        self.dagstore.update_flow(flow_key, *task_modules)
 
     def sched_flow(self, flow_key, cron):
-        self.scheduler.schedule_flow(flow_key, cron)
+        self.dagstore.schedule_flow(flow_key, cron)
 
     def list_task(self):
         import importlib

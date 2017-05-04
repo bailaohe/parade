@@ -47,7 +47,7 @@ class ${TaskName}(SqlETLTask):
         the target connection to write the result
         :return:
         """
-        raise NotImplemented("The target is required")
+        raise NotImplementedError("The target is required")
 
     @property
     def target_table(self):
@@ -79,7 +79,7 @@ class ${TaskName}(SqlETLTask):
         the source connection to write the result
         :return:
         """
-        raise NotImplemented("The source is required")
+        raise NotImplementedError("The source is required")
 
     @property
     def etl_sql(self):
@@ -87,5 +87,5 @@ class ${TaskName}(SqlETLTask):
         the single sql statement to process etl
         :return:
         """
-        raise NotImplemented("The etl-sql is required")
+        raise NotImplementedError("The etl-sql is required")
 

@@ -31,6 +31,9 @@ class Context(object):
             d[task_name] = task()
         return d
 
+    def list_tasks(self):
+        return self._get_tasks().keys()
+
     def get_connection(self, conn_key):
         """
         Get the connection with the connection key

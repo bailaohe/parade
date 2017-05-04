@@ -16,14 +16,27 @@ class ExecCommand(ParadeCommand):
 
         tasks = kwargs.get('task')
         force = kwargs.get('force')
-        logger.debug('prepare to execute task {}'.format(tasks))
+        no_dag = kwargs.get('no_dag')
+        logger.debug('prepare to execute tasks {}'.format(tasks))
 
-        for task in tasks:
-            engine.execute(task, force=force)
+        if len(tasks) == 0:
+            tasks = context.list_tasks()
+            logger.info('no task provided, use detected {} tasks in workspace {}'.format(len(tasks), tasks))
+
+        if len(tasks) == 1:
+            logger.info('single task {} provided, ignore its dependencies'.format(tasks[0]))
+            no_dag = True
+
+        if no_dag:
+            for task in tasks:
+                engine.execute(task, force=force)
+        else:
+            engine.execute_dag(*tasks)
 
     def short_desc(self):
         return 'execute a flow or a set of tasks'
 
     def config_parser(self, parser):
+        parser.add_argument('--no-dag', action="store_true", help='execute tasks without considering dependencies')
         parser.add_argument('--force', action="store_true", help='force the task to execute')
         parser.add_argument('task', nargs='*', help='the task to schedule')

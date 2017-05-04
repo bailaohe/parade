@@ -47,7 +47,7 @@ class ${TaskName}(ETLTask):
         the target connection to write the result
         :return:
         """
-        raise NotImplemented("The target is required")
+        raise NotImplementedError("The target is required")
 
     @property
     def target_table(self):

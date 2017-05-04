@@ -180,7 +180,7 @@ class ETLTask(Task):
         the target connection to write the result
         :return:
         """
-        raise NotImplemented("The target is required")
+        raise NotImplementedError("The target is required")
 
     @property
     def target_table(self):
@@ -225,7 +225,7 @@ class ETLTask(Task):
         :param kwargs:
         :return:
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def on_commit(self, context, txn_id, **kwargs):
         target_df = self._result
@@ -261,7 +261,7 @@ class SqlETLTask(ETLTask):
         the source connection to write the result
         :return:
         """
-        raise NotImplemented("The source is required")
+        raise NotImplementedError("The source is required")
 
     @property
     def etl_sql(self):
@@ -269,7 +269,7 @@ class SqlETLTask(ETLTask):
         the single sql statement to process etl
         :return:
         """
-        raise NotImplemented("The etl-sql is required")
+        raise NotImplementedError("The etl-sql is required")
 
     def execute_internal(self, context, **kwargs):
         source_conn = context.get_connection(self.source_conn)
@@ -284,7 +284,7 @@ class APITask(Task):
     ATTR_EXPORT_LABELS = 'export_labels'
 
     def execute_internal(self, context, **kwargs):
-        raise NotImplemented
+        raise NotImplementedError
 
     def execute(self, context, **kwargs):
         raw = self.execute_internal(context, **kwargs)

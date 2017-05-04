@@ -84,7 +84,7 @@ You can find much more sub-commands available now. We come to the details of the
 │   │   ├── __init__.py
 │   │   ├── connection
 │   │   │   └── __init__.py
-│   │   └── scheduler
+│   │   └── dagstore
 │   │       └── __init__.py
 │   └── task
 │       └── __init__.py
@@ -96,7 +96,7 @@ You can find much more sub-commands available now. We come to the details of the
 
 At top there are a package named *example* (as we specified) and two yaml files. The package has two sub-packages: 
 
-- *contrib* contains user defined components, such as connection drivers, task schedulers, etc.
+- *contrib* contains user defined components, such as connection drivers, task dagstores, etc.
 - *task* holds all the data tasks to execute or schedule.
 
 The yaml file *parade.bootstrap.yml* is just a **pointer** to the configuration repo for this workspace. Its content is as follows:

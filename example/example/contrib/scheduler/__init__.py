@@ -1,2 +1,2 @@
-# Place contrib schedulers here
+# Place contrib dagstores here
 #

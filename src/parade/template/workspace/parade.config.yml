@@ -46,6 +46,6 @@ connection:
     uri: http://elastic:changeme@127.0.0.1:9200/
     # connection can only handle input or output
     output: dataframe
-scheduler:
-  driver: parade
+dagstore:
+  driver: default
 
