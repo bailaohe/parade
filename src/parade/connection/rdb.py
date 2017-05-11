@@ -99,7 +99,7 @@ class RDBConnection(Connection):
             chunk.to_sql(name=table, con=_conn, index=False, schema=schema, if_exists=if_exists_, dtype=typehints)
             logger.info("Write rows #{}-#{}".format(idx * chunksize, (idx + 1) * chunksize))
 
-        if if_exists == 'replace':
+        if if_exists == 'replace' and len(df) > 0:
             if pkey:
                 pkeys = pkey if isinstance(pkey, str) else ','.join(pkey)
                 _conn.execute('ALTER TABLE {} ADD PRIMARY KEY ({})'.format(table, pkeys))
