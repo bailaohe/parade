@@ -94,12 +94,17 @@ class RDBConnection(Connection):
                 yield df[i:i + _chunksize]
 
         _conn = self.open()
-        for idx, chunk in enumerate(_chunks(df, chunksize)):
-            if_exists_ = 'append' if idx > 0 else if_exists
-            chunk.to_sql(name=table, con=_conn, index=False, schema=schema, if_exists=if_exists_, dtype=typehints)
-            logger.info("Write rows #{}-#{}".format(idx * chunksize, (idx + 1) * chunksize))
+        # still write to database for empty dataframe
+        if df.empty:
+            df.to_sql(name=table, con=_conn, index=False, schema=schema, if_exists=if_exists, dtype=typehints)
+            logger.warn("Write to {}: empty dataframe".format(table))
+        else:
+            for idx, chunk in enumerate(_chunks(df, chunksize)):
+                if_exists_ = 'append' if idx > 0 else if_exists
+                chunk.to_sql(name=table, con=_conn, index=False, schema=schema, if_exists=if_exists_, dtype=typehints)
+                logger.info("Write to {}: rows #{}-#{}".format(table, idx * chunksize, (idx + 1) * chunksize))
 
-        if if_exists == 'replace' and len(df) > 0:
+        if if_exists == 'replace':
             if pkey:
                 pkeys = pkey if isinstance(pkey, str) else ','.join(pkey)
                 _conn.execute('ALTER TABLE {} ADD PRIMARY KEY ({})'.format(table, pkeys))
