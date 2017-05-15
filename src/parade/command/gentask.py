@@ -12,9 +12,7 @@ from ..utils.template import string_camelcase, render_templatefile
 
 class GenTaskCommand(ParadeCommand):
     """
-    The init command will create a workspace with template.
-    The workspace will hold all user's work (tasks and flows)
-    and customized configurations.
+    The gentask command will create a task of specified type in current workspace
     """
     requires_workspace = True
 
@@ -24,30 +22,6 @@ class GenTaskCommand(ParadeCommand):
     def config_parser(self, parser):
         parser.add_argument('task', nargs='*', help='the name of the task to generate')
         parser.add_argument('-t', '--task_type', dest='task_type', help='the type of the task to generate', required=True)
-
-    @staticmethod
-    def _is_valid_name(workspace_name):
-        """
-        check if the workspace name is valid
-        :param workspace_name: the specified workspace name
-        :return:
-        """
-
-        def _module_exists(module_name):
-            try:
-                import_module(module_name)
-                return True
-            except ImportError:
-                return False
-
-        if not re.search(r'^[_a-zA-Z]\w*$', workspace_name):
-            print('Error: Workspace names must begin with a letter and contain' \
-                  ' only\nletters, numbers and underscores')
-        elif _module_exists(workspace_name):
-            print('Error: Module %r already exists' % workspace_name)
-        else:
-            return True
-        return False
 
     def run_internal(self, context, **kwargs):
         task_names = kwargs['task']
