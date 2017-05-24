@@ -5,43 +5,6 @@ from parade.core.task import ETLTask
 class ${TaskName}(ETLTask):
 
     @property
-    def checkpoint_round(self):
-        """
-        the time interval the checkpoint will align to
-        default value is 1 day
-        :return:
-        """
-        return 3600 * 24
-
-    @property
-    def checkpoint_timezone(self):
-        """
-        the timezone used when recording checkpoint
-        default: None, use the local timezone
-        :return:
-        """
-        return None
-
-    @property
-    def checkpoint_column(self):
-        """
-        the column to use as the clue for checkpoint
-        :return:
-        """
-        if self.target_mode == 'append':
-            raise NotImplementedError
-        return None
-
-    @property
-    def checkpoint_conn(self):
-        """
-        the connection to record the checkpoint
-        default value is the target connection
-        :return:
-        """
-        return self.target_conn
-
-    @property
     def target_conn(self):
         """
         the target connection to write the result
@@ -73,6 +36,22 @@ class ${TaskName}(ETLTask):
         """
         return {}
 
+    @property
+    def target_pkey(self):
+        """
+        a string or a string-tuple to specify the primary key on the target table
+        :return:
+        """
+        return None
+
+    @property
+    def target_indexes(self):
+        """
+        a string or a string-tuple or a string/string-tuple list to specify the indexes on the target table
+        :return:
+        """
+        return []
+
     def execute_internal(self, context, **kwargs):
         """
         the internal execution process to be implemented
@@ -81,4 +60,32 @@ class ${TaskName}(ETLTask):
         :return:
         """
         raise NotImplementedError
+
+    @property
+    def checkpoint_round(self):
+        """
+        the time interval the checkpoint will align to
+        default value is 1 day
+        :return:
+        """
+        return 3600 * 24
+
+    @property
+    def checkpoint_timezone(self):
+        """
+        the timezone used when recording checkpoint
+        default: None, use the local timezone
+        :return:
+        """
+        return None
+
+    @property
+    def checkpoint_conn(self):
+        """
+        the connection to record the checkpoint
+        default value is the target connection
+        :return:
+        """
+        return self.target_conn
+
 

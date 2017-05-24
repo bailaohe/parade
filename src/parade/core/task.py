@@ -209,13 +209,20 @@ class ETLTask(Task):
     @property
     def target_pkey(self):
         """
-        a string or a string-list to specify the primary key of target
+        a string or a string-tuple to specify the primary key on the target table
         :return:
         """
         return None
 
     @property
     def target_indexes(self):
+        """
+        a string or a string-tuple or a string/string-tuple list to specify the indexes on the target table
+        :return:
+        """
+        """
+        :return:
+        """
         return []
 
     def execute_internal(self, context, **kwargs):
