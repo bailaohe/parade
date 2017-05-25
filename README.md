@@ -396,7 +396,7 @@ ORDER BY excellence_count DESC;
 Run following command to generate the skeleton of this task:
 
 ```bash
-parade gentask genres_distrib -t sql
+> parade gentask genres_distrib -t sql
 ```
 
 Then we edit the source `example/task/genres_distrib.py` to contains following stuff:
@@ -501,16 +501,155 @@ After executing this task, we can check the analysis result in database:
 
 From the result we can find that the genres with the most top-rates is `Drama`, but its average budget is much less than `Action` and `Adventure`.
 
-#### Compose the third task
+#### Compose the third archive task
+
+Sometimes we may want to archive our data into some targets other than relational database, such as `Elasticsearch`. `Parade`'s plugin-based architecture makes incorporation with contributed components, such as third-party connections, very easy. Let's try to archive the output of task `movie_data` into a elasticsearch server.
+
+As mentioned above, you can implement your own connection driver in a python class (overriding the base `Connection` class) and place it into the package path `contrib/connection` in your workspace. `Parade` then can load your connection before task execution. We have provided some in-hand connections in our github repo [parade-contrib](https://github.com/bailaohe/parade-contrib). You can download the elasticsearch connection driver into your workspace by simply typing:
 
 ```bash
-parade install connection elastic
+> parade install connection elastic
+```
+
+Now you will find a `elastic.py` file in `example/contrib/connection`. This connection require some configuration about the target elasticsearch server in `example-default-1.0.yml` as follows, which we have provided before:
+
+```
+  elastic-conn:
+    driver: elastic
+    protocol: http
+    host: 127.0.0.1
+    port: 9200
+    user: elastic
+    password: changeme
+    db: example
+    uri: http://elastic:changeme@127.0.0.1:9200/
+```
+
+The following things are easy. We generate another `sql`-type task, `archive_data`, with dependence on `movie_data`. The task takes `elastic-conn` as target_conn, and return following sql statement from `etl_sql`:
+
+```sql
+SELECT
+  movie_title, genres,
+  title_year, content_rating,
+  budget, num_voted_users, imdb_score
+FROM movie_data
+``` 
+
+After execution, we can find the data is already stored in our elasticsearch:
+
+```bash
+> curl -XGET 'localhost:9200/example/_search' | json_pp
+
+{
+   "timed_out" : false,
+   "hits" : {
+      "max_score" : 1,
+      "total" : 4543,
+      "hits" : [
+         {
+            "_score" : 1,
+            "_id" : "AVw9cIPdG8Vt64Emu4r_",
+            "_source" : {
+               "budget" : 250000000,
+               "genres" : "Adventure|Family|Fantasy|Mystery",
+               "imdb_score" : 7.5,
+               "movie_title" : "Harry Potter and the Half-Blood Prince ",
+               "num_voted_users" : 321795,
+               "title_year" : 2009,
+               "content_rating" : "PG"
+            },
+            "_type" : "archive_data",
+            "_index" : "example"
+         },
+         ...
+      ]
+   },
+   "took" : 14,
+   "_shards" : {
+      "successful" : 5,
+      "total" : 5,
+      "failed" : 0
+   }
+}
 ```
 
 #### Build the DAG-workflow
 
+Till now, we only execute every composed task one by one. You may find that we have specify the dependences between them in the task source, which make these tasks constitute a DAG-workflow, but `Parade` seems not recognitive to these attributes.
+
+In fact, `Parade` can handle DAG very well in executing task batch. We can provide multiple tasks as arguments to sub-command `exec`, `Parade` will build a DAG-workflow based on their inter-dependences and execute them in correct order.
+
 ```bash
-parade install dagstore azkaban
+> parade exec movie_data genres_distrib archive_data
+
+2017-05-25 11:19:54,213 program_name DEBUG [5196] [exec.py:20]: prepare to execute tasks ['movie_data', 'genres_distrib', 'archive_data']
+2017-05-25 11:19:54,216 program_name DEBUG [5196] [engine.py:127]: pick up task [genres_distrib] ...
+2017-05-25 11:19:54,216 program_name DEBUG [5196] [engine.py:127]: pick up task [movie_data] ...
+2017-05-25 11:19:54,216 program_name DEBUG [5196] [engine.py:147]: task movie_data start executing ...
+2017-05-25 11:19:55,220 program_name DEBUG [5196] [engine.py:127]: pick up task [archive_data] ...
+2017-05-25 11:19:56,224 program_name DEBUG [5196] [engine.py:127]: pick up task [genres_distrib] ...
+2017-05-25 11:20:01,565 program_name DEBUG [5196] [engine.py:149]: task movie_data Executed successfully
+2017-05-25 11:20:01,565 program_name DEBUG [5196] [engine.py:127]: pick up task [genres_distrib] ...
+2017-05-25 11:20:01,566 program_name DEBUG [5196] [engine.py:144]: all dependant task(s) of task genres_distrib is done
+2017-05-25 11:20:01,566 program_name DEBUG [5196] [engine.py:147]: task genres_distrib start executing ...
+2017-05-25 11:20:02,249 program_name DEBUG [5196] [engine.py:127]: pick up task [archive_data] ...
+2017-05-25 11:20:02,249 program_name DEBUG [5196] [engine.py:144]: all dependant task(s) of task archive_data is done
+2017-05-25 11:20:02,249 program_name DEBUG [5196] [engine.py:147]: task archive_data start executing ...
+2017-05-25 11:20:02,370 program_name DEBUG [5196] [engine.py:149]: task archive_data Executed successfully
+2017-05-25 11:20:02,779 program_name DEBUG [5196] [engine.py:149]: task genres_distrib Executed successfully
 ```
+
+As you have seen, `Parade` take dependences into consideration by default when executing multiple tasks. If you do not provide any task arguments, `Parade` will search and execute all tasks in current workspace as a single DAG. If you just want to execute multiple tasks rather than DAG, use option `--no-dag` when running `exec`.
+
+At present, `Parade` can only handle DAG execution in single process in single host, which make us think `Parade` should support scheduling DAG execution to some third-party scheduler. In this example, we indicate that how we can submit our tasks as a workflow into LinkedIn's Azkaban Scheduler. Install this dagstore driver at first:
+
+```bash
+> parade install dagstore azkaban
+```
+
+Then add following azkaban configuration into `example-default-1.0.yml`:
+
+```
+dagstore:
+  driver: 'azkaban'
+  azkaban:
+    host: "http://127.0.0.1:8081"
+    username: azkaban
+    password: azkaban
+    project: TestProject
+    notifymail: "yourmail@yourdomain.com"
+    cmd: "parade exec {task}"
+```
+
+Now we can use following command to submit the workflow to azkaban:
+
+```bash
+> parade mkdag movie_data genres_distrib archive_data   
+2017-05-25 11:39:20,832 program_name DEBUG [5781] [__init__.py:27]: Task forests generated [genres_distrib, archive_data]
+2017-05-25 11:39:20,833 program_name DEBUG [5781] [azkaban.py:126]: Job files generation succeed
+2017-05-25 11:39:20,835 program_name DEBUG [5781] [azkaban.py:140]: Job files zipped into ./flows/example.zip
+2017-05-25 11:39:20,850 program_name DEBUG [5781] [connectionpool.py:207]: Starting new HTTP connection (1): 114.55.60.153
+2017-05-25 11:39:20,871 program_name DEBUG [5781] [connectionpool.py:395]: http://127.0.0.1:8081 "POST /?username=azkaban&action=login&password=azkaban HTTP/1.1" 200 83
+2017-05-25 11:39:20,873 program_name DEBUG [5781] [azkaban.py:51]: Azkaban session updated: c5dfea78-c7f9-4fb4-bc88-f9a2973cafaf
+2017-05-25 11:39:20,876 program_name DEBUG [5781] [connectionpool.py:207]: Starting new HTTP connection (1): 114.55.60.153
+2017-05-25 11:39:21,039 program_name DEBUG [5781] [connectionpool.py:395]: http://127.0.0.1:8081 "POST /manager HTTP/1.1" 200 42
+2017-05-25 11:39:21,041 program_name INFO [5781] [azkaban.py:163]: Azkaban flow example updated, you can go to http://127.0.0.1:8081/manager?project=TestProject&flow=example to check
+2017-05-25 11:39:21,044 program_name DEBUG [5781] [connectionpool.py:207]: Starting new HTTP connection (1): 114.55.60.153
+2017-05-25 11:39:21,103 program_name DEBUG [5781] [connectionpool.py:395]: http://127.0.0.1:8081 "POST /?username=azkaban&action=login&password=azkaban HTTP/1.1" 200 83
+2017-05-25 11:39:21,105 program_name DEBUG [5781] [azkaban.py:51]: Azkaban session updated: 15130e29-8e8c-4687-8fe2-1f606ba80a8a
+2017-05-25 11:39:21,132 program_name DEBUG [5781] [connectionpool.py:207]: Starting new HTTP connection (1): 114.55.60.153
+2017-05-25 11:39:21,157 program_name DEBUG [5781] [connectionpool.py:395]: http://127.0.0.1:8081 "POST /?username=azkaban&action=login&password=azkaban HTTP/1.1" 200 83
+2017-05-25 11:39:21,161 program_name DEBUG [5781] [azkaban.py:51]: Azkaban session updated: cddfc98c-d0e4-4673-98f8-1b8e6804ac7e
+2017-05-25 11:39:21,166 program_name DEBUG [5781] [connectionpool.py:207]: Starting new HTTP connection (1): 114.55.60.153
+2017-05-25 11:39:21,184 program_name DEBUG [5781] [connectionpool.py:395]: http://127.0.0.1:8081 "GET /manager?project=TestProject&session.id=cddfc98c-d0e4-4673-98f8-1b8e6804ac7e HTTP/1.1" 200 None
+2017-05-25 11:39:21,266 program_name DEBUG [5781] [connectionpool.py:207]: Starting new HTTP connection (1): 114.55.60.153
+2017-05-25 11:39:21,299 program_name DEBUG [5781] [connectionpool.py:395]: http://127.0.0.1:8081 "GET /schedule?projectName=TestProject&projectId=3&session.id=15130e29-8e8c-4687-8fe2-1f606ba80a8a&scheduleTime=12%2C05%2CAM%2C%2B08%3A00&flow=example&period=1d&is_recurring=on&ajax=scheduleFlow&scheduleDate= HTTP/1.1" 200 94
+```
+
+You'll find the DAG is already located in your azkaban server. And now you can schedule the execution with azkaban server.
+
+![demo](https://raw.githubusercontent.com/bailaohe/parade/master/assets/azkaban-demo.png "azkaban DAG demo")
+
+
 
 
