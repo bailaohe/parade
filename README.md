@@ -375,8 +375,142 @@ CREATE TABLE `movie_data` (
 
 #### Compose another Analysis task
 
-	
- 
+Let's say that we need compose another task based on the ETL result of the first one. The task is used to analysis some distribution stats, such as top-rated (`imdb_score` >= 7) count, excellent rate (#top-rated / #total), and average budget among the movie genres.
 
+Since the dataset is already placed in a single database, we can process above analysis with one SQL statement:
+
+```sql
+SELECT
+  genres_root,
+  COUNT(1) DIV 1                            total_count,
+  SUM(IF(imdb_score >= 7, 1, 0)) DIV 1      excellence_count,
+  SUM(IF(imdb_score >= 7, 1, 0)) / count(1) excellence_rate,
+  AVG(budget) DIV 1                         avg_budget
+FROM movie_data
+GROUP BY genres_root
+ORDER BY excellence_count DESC;
+```
+
+`Parade` provides another sub-task-type of `etl`, i.e., `sql`, to facilitate the implementation of ETL tasks can be accomplished by single SQL statements.
+
+Run following command to generate the skeleton of this task:
+
+```bash
+parade gentask genres_distrib -t sql
+```
+
+Then we edit the source `example/task/genres_distrib.py` to contains following stuff:
+
+```python
+# -*- coding:utf-8 -*-
+from parade.core.task import SqlETLTask
+from parade.type import stdtypes
+
+
+class GenresDistrib(SqlETLTask):
+
+    @property
+    def target_conn(self):
+        """
+        the target connection to write the result
+        :return:
+        """
+        return 'stat'
+
+    @property
+    def target_typehints(self):
+        """
+        a dict of column_name => datatype, to customize the data type before write target
+        :return:
+        """
+        return {
+            'genres_root': stdtypes.StringType(32),
+            'avg_budget': stdtypes.IntegerType(20),
+            'total_count': stdtypes.IntegerType(),
+            'excellence_count': stdtypes.IntegerType(),
+        }
+
+    @property
+    def source_conn(self):
+        """
+        the source connection to write the result
+        :return:
+        """
+        return 'stat'
+
+    @property
+    def etl_sql(self):
+        """
+        the single sql statement to process etl
+        :return:
+        """
+        return """
+        SELECT
+          genres_root,
+          COUNT(1) DIV 1                            total_count,
+          SUM(IF(imdb_score >= 7, 1, 0)) DIV 1      excellence_count,
+          SUM(IF(imdb_score >= 7, 1, 0)) / count(1) excellence_rate,
+          AVG(budget) DIV 1                         avg_budget
+        FROM movie_data
+        GROUP BY genres_root
+        ORDER BY excellence_count DESC;
+        """
+
+    @property
+    def deps(self):
+        """
+        a string-array to specified the dependant tasks has to be completed before this one
+        :return:
+        """
+        return ['movie_data']
+
+```
+
+You can see we just return the sql string from the `@property` function `etl_sql`. Along with that, the source specifies the source & target connection and typehints.
+
+Finally, we add another `@property` function `deps` to customize the dependance of this task with an string-array. This task only requires a single task, i.e., `movie_data`.
+
+After executing this task, we can check the analysis result in database:
+
+```sql
+> select * from genres_distrib;
++-------------+-------------+------------------+-----------------+------------+
+| genres_root | total_count | excellence_count | excellence_rate | avg_budget |
++-------------+-------------+------------------+-----------------+------------+
+| Drama       |         840 |              405 |          0.4821 |   24908465 |
+| Action      |        1098 |              263 |          0.2395 |   64647649 |
+| Comedy      |        1169 |              261 |          0.2233 |   31601107 |
+| Adventure   |         433 |              165 |          0.3811 |   64342879 |
+| Biography   |         233 |              161 |           0.691 |   24308608 |
+| Crime       |         298 |              145 |          0.4866 |   36998053 |
+| Documentary |          67 |               50 |          0.7463 |    5831930 |
+| Horror      |         215 |               28 |          0.1302 |   11349153 |
+| Animation   |          51 |               25 |          0.4902 |   50958431 |
+| Fantasy     |          47 |               13 |          0.2766 |   14440319 |
+| Mystery     |          32 |               13 |          0.4063 |   26230156 |
+| Western     |          11 |                7 |          0.6364 |    3203181 |
+| Sci-Fi      |          13 |                4 |          0.3077 |   17182307 |
+| Thriller    |          16 |                3 |          0.1875 |    2959812 |
+| Family      |          11 |                3 |          0.2727 |    6010909 |
+| Romance     |           6 |                1 |          0.1667 |   20558833 |
+| Film-Noir   |           1 |                1 |               1 |    1696377 |
+| Musical     |           2 |                1 |             0.5 |    3189500 |
++-------------+-------------+------------------+-----------------+------------+
+18 rows in set (0.01 sec)
+```
+
+From the result we can find that the genres with the most top-rates is `Drama`, but its average budget is much less than `Action` and `Adventure`.
+
+#### Compose the third task
+
+```bash
+parade install connection elastic
+```
+
+#### Build the DAG-workflow
+
+```bash
+parade install dagstore azkaban
+```
 
 

@@ -39,6 +39,10 @@ class Task(object):
 
     @property
     def deps(self):
+        """
+        a string-array to specified the dependant tasks has to be completed before this one
+        :return:
+        """
         return set()
 
     @property
