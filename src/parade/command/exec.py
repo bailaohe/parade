@@ -20,7 +20,7 @@ class ExecCommand(ParadeCommand):
         logger.debug('prepare to execute tasks {}'.format(tasks))
 
         if len(tasks) == 0:
-            tasks = context.list_tasks()
+            tasks = list(context.list_tasks())
             logger.info('no task provided, use detected {} tasks in workspace {}'.format(len(tasks), tasks))
 
         if len(tasks) == 1:
