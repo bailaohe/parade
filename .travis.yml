@@ -10,8 +10,7 @@ python:
   - "nightly" # currently points to 3.7-dev
 # command to install dependencies
 install:
-  - pip install -U tox twine wheel codecov
+  - pip install -U twine wheel codecov
 
-script: tox
 after_success:
   - codecov
