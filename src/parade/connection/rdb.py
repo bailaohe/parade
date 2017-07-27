@@ -59,27 +59,56 @@ class RDBConnection(Connection):
         chunksize = kwargs.get('chunksize', None)
         pkey = kwargs.get('pkey', None)
         indexes = kwargs.get('indexes', [])
+        checkpoint_column = kwargs.get('checkpoint_column', None)
+        checkpoint = kwargs.get('checkpoint')
+        last_checkpoint = kwargs.get('last_checkpoint')
+
+        _conn = self.open()
+        target_table = Table(table, MetaData(), autoload=True, autoload_with=_conn)
+
+        if if_exists == 'append' or if_exists == 'update':
+            assert checkpoint_column is not None, "checkpoint_column is required in update mode!"
+            assert (isinstance(checkpoint_column, tuple) and len(checkpoint_column) == 2) or isinstance(checkpoint_column, str), "checkpoint_column can only be str or 2-tuple!"
+
+            if isinstance(checkpoint_column, tuple):
+                (create_time_column, update_time_column) = checkpoint_column
+            else:
+                create_time_column = checkpoint_column
+                update_time_column = checkpoint_column
+
+            # append/update方式下回收超出本次checkpoint的数据
+            clear_ins = target_table.delete().where(Column(update_time_column) >= last_checkpoint)
+            _conn.execute(clear_ins)
+
+            if if_exists == 'update':
+                assert pkey is not None, "primary key is required in update mode!"
+                assert isinstance(pkey, str), "update mode only support single primary key"
+                update_df = df[df[create_time_column] < last_checkpoint]
+                if not update_df.empty:
+                    update_keys = list(update_df[pkey])
+                    _conn.execute(target_table.delete().where(Column(pkey) in update_keys))
+
         schema = None
         if table.find('.') >= 0:
             toks = table.split('.', 1)
             schema = toks[0]
             table = toks[1]
 
-        floatcolumns = list(df.select_dtypes(include=['float64', 'float']).keys())
-        if len(floatcolumns) > 0:
+        float_columns = list(df.select_dtypes(include=['float64', 'float']).keys())
+        if len(float_columns) > 0:
             logger.warn(
                     "Detect columns with float types {}, you better check if this is caused by NAN-integer column issue of pandas!".format(
-                            list(floatcolumns)))
+                            list(float_columns)))
 
         typehints = dict()
-        objcolumns = list(df.select_dtypes(include=['object']).keys())
+        obj_columns = list(df.select_dtypes(include=['object']).keys())
 
-        if len(objcolumns) > 0:
+        if len(obj_columns) > 0:
             logger.warn(
                     "Detect columns with object types {}, which is automatically converted to *VARCHAR(256)*, you can override this by specifying type hints!".format(
-                            list(objcolumns)))
+                            list(obj_columns)))
         import sqlalchemy.types as sqltypes
-        typehints.update(dict((k, sqltypes.VARCHAR(256)) for k in objcolumns))
+        typehints.update(dict((k, sqltypes.VARCHAR(256)) for k in obj_columns))
 
         # TODO: upddate typehints with user-specified one
         _typehints = kwargs.get('typehints', {})
@@ -93,7 +122,6 @@ class RDBConnection(Connection):
             for i in range(0, len(_df), _chunksize):
                 yield df[i:i + _chunksize]
 
-        _conn = self.open()
         # still write to database for empty dataframe
         if df.empty:
             df.to_sql(name=table, con=_conn, index=False, schema=schema, if_exists=if_exists, dtype=typehints)
@@ -136,11 +164,7 @@ class RDBConnection(Connection):
 
     def create_record(self, task_name, new_checkpoint):
         _conn = self.open()
-        # TODO append方式下回收超出本次checkpoint的数据
-        # if self.get_target_mode() == 'append':
-        #     target_table = Table(self.get_target_table(), MetaData(), autoload=True, autoload_with=target_conn)
-        #     clear_ins = target_table.delete(whereclause="TIMESTAMP(" + self.checkpoint_column + ") >= '" + self._last_checkpoint + "'")
-        #     target_conn.execute(clear_ins)
+
         # 创建待提交checkpoint
         ins = self.task_table.insert().values(task=task_name, checkpoint=new_checkpoint)
         return _conn.execute(ins).inserted_primary_key[0]

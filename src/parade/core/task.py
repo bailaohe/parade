@@ -83,16 +83,6 @@ class Task(object):
         """
         return self.target_conn
 
-    # @property
-    # def checkpoint_column(self):
-    #     """
-    #     the column to use as the clue for checkpoint
-    #     :return:
-    #     """
-    #     if self.target_mode == 'append':
-    #         raise NotImplementedError
-    #     return None
-
     def _start(self, context, **kwargs):
         """
         start a checkpoint transaction before executing the task
@@ -229,6 +219,14 @@ class ETLTask(Task):
         """
         return []
 
+    @property
+    def target_checkpoint_column(self):
+        """
+        the columns to use as the clue of last/checkpoint in target table
+        :return:
+        """
+        return None
+
     def execute_internal(self, context, **kwargs):
         """
         the internal execution process to be implemented
@@ -246,7 +244,6 @@ class ETLTask(Task):
             assert isinstance(self.target_pkey, str) or isinstance(self.target_pkey, tuple),\
                 "target primary key can only be of type string or tuple"
 
-        indexes = []
         if not self.target_indexes:
             indexes = []
         elif isinstance(self.target_indexes, tuple):
@@ -261,6 +258,9 @@ class ETLTask(Task):
                           if_exists=self.target_mode,
                           chunksize=kwargs.get('chunksize', 10000),
                           typehints=self.target_typehints,
+                          checkpoint=self._checkpoint,
+                          last_checkpoint=self._last_checkpoint,
+                          checkpoint_column=self.target_checkpoint_column,
                           pkey=self.target_pkey,
                           indexes=indexes)
 
