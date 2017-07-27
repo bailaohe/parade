@@ -76,7 +76,7 @@ class RDBConnection(Connection):
                 create_time_column = checkpoint_column
                 update_time_column = checkpoint_column
 
-            # append/update方式下回收超出本次checkpoint的数据
+            # delete extra records over last checkpoint in append/update mode
             clear_ins = target_table.delete().where(Column(update_time_column) >= last_checkpoint)
             _conn.execute(clear_ins)
 
@@ -85,8 +85,11 @@ class RDBConnection(Connection):
                 assert isinstance(pkey, str), "update mode only support single primary key"
                 update_df = df[df[create_time_column] < last_checkpoint]
                 if not update_df.empty:
+                    logger.info("find {} records to update", len(update_df))
                     update_keys = list(update_df[pkey])
-                    _conn.execute(target_table.delete().where(Column(pkey) in update_keys))
+                    delete_ins = target_table.delete().where(Column(pkey).in_(update_keys))
+                    _conn.execute(delete_ins)
+                if_exists = 'append'
 
         schema = None
         if table.find('.') >= 0:
