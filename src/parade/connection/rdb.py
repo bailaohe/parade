@@ -85,7 +85,7 @@ class RDBConnection(Connection):
                 assert isinstance(pkey, str), "update mode only support single primary key"
                 update_df = df[df[create_time_column] < last_checkpoint]
                 if not update_df.empty:
-                    logger.info("find {} records to update", len(update_df))
+                    logger.info("find {} records to update".format(len(update_df)))
                     update_keys = list(update_df[pkey])
                     delete_ins = target_table.delete().where(Column(pkey).in_(update_keys))
                     _conn.execute(delete_ins)
