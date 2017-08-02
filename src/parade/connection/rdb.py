@@ -64,9 +64,9 @@ class RDBConnection(Connection):
         last_checkpoint = kwargs.get('last_checkpoint')
 
         _conn = self.open()
-        target_table = Table(table, MetaData(), autoload=True, autoload_with=_conn)
 
         if if_exists == 'append' or if_exists == 'update':
+            target_table = Table(table, MetaData(), autoload=True, autoload_with=_conn)
             assert checkpoint_column is not None, "checkpoint_column is required in update mode!"
             assert (isinstance(checkpoint_column, tuple) and len(checkpoint_column) == 2) or isinstance(checkpoint_column, str), "checkpoint_column can only be str or 2-tuple!"
 
