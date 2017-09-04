@@ -3,6 +3,7 @@ from collections import defaultdict
 from ..core.task import Task
 from ..utils.modutils import get_class, iter_classes
 from ..connection import Connection, Datasource
+from ..notify import Notify
 
 
 class Context(object):
@@ -15,6 +16,7 @@ class Context(object):
         self.conf = conf
 
         self._conn_cache = defaultdict(Connection)
+        self._notifier = None
         self.task_dict = self._get_tasks()
 
     def setup(self):
@@ -50,6 +52,25 @@ class Context(object):
                 self._conn_cache[conn_key] = conn_cls(datasource)
 
         if conn_key not in self._conn_cache:
-            raise NotImplementedError("The driver [%s] is not supported".format("conn_key"))
+            raise NotImplementedError("The connection [{}] initialization failed".format(conn_key))
 
         return self._conn_cache[conn_key]
+
+    def get_notifier(self):
+        """
+        Get the notifier with the notify key
+        :param notify_key: the key of the notifier
+        :return: the notifier instance
+        """
+
+        if not self._notifier:
+            notify_conf = self.conf['notify']
+            assert 'driver' in notify_conf.to_dict(), 'no driver provided in notify section'
+            driver = notify_conf['driver']
+            assert driver in notify_conf.to_dict(), 'no driver {} provided in notify section'.format(driver)
+
+            notifier_cls = get_class(driver, Notify, 'parade.notify', self.name + '.contrib.notify')
+            if notifier_cls:
+                self._notifier = notifier_cls(notify_conf[driver])
+
+        return self._notifier

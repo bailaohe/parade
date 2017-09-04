@@ -66,8 +66,8 @@ class Engine(object):
         """
         assert task_name in self.context.task_dict, 'task {} not found'.format(task_name)
         task = self.context.task_dict[task_name]
-        result = task.execute(self.context, **kwargs)
-        return result, task.attributes
+        task.execute(self.context, **kwargs)
+        return task.result_code, task.result, task.attributes
 
     def execute_dag(self, *task_names):
         """

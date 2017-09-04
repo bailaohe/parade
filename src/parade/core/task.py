@@ -12,6 +12,8 @@ class Task(object):
     """
 
     DEFAULT_CHECKPOINT = '1970-01-01 00:00:00'
+    RET_CODE_SUCCESS = 0
+    RET_CODE_FAIL = 1
 
     def __init__(self):
         """
@@ -21,6 +23,7 @@ class Task(object):
         """
         self._result = None
         self._attributes = {}
+        self._result_code = self.RET_CODE_SUCCESS
         self._last_checkpoint = self.DEFAULT_CHECKPOINT
         self._checkpoint = self.DEFAULT_CHECKPOINT
 
@@ -53,8 +56,32 @@ class Task(object):
         """
         return self._attributes
 
+    @property
+    def result(self):
+        """
+        the task result
+        :return:
+        """
+        return self._result
+
+    @property
+    def result_code(self):
+        """
+        the task result code
+        :return:
+        """
+        return self._result_code
+
     def set_attribute(self, key, val):
         self._attributes[key] = val
+
+    @property
+    def notify_success(self):
+        return False
+
+    @property
+    def notify_fail(self):
+        return True
 
     @property
     def checkpoint_round(self):
@@ -141,15 +168,25 @@ class Task(object):
         :return:
         """
         txn_id = self._start(context, **kwargs)
+
         try:
             if txn_id:
                 self._result = self.execute_internal(context, **kwargs)
                 self.on_commit(context, txn_id)
                 self._commit(context, txn_id)
+                self._result_code = self.RET_CODE_SUCCESS
+
+                if self.notify_success and context.get_notifier() is not None:
+                    context.get_notifier().notify_success(self.name)
+
         except Exception as e:
             logger.exception(str(e))
             self._rollback(context, txn_id, e)
             self.on_rollback(context, txn_id)
+            self._result_code = self.RET_CODE_FAIL
+
+            if self.notify_fail and context.get_notifier() is not None:
+                context.get_notifier().notify_error(self.name, str(e))
 
     def on_commit(self, context, txn_id, **kwargs):
         pass

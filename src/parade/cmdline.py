@@ -64,8 +64,10 @@ def execute():
         command_args.update(workspace=workspace_settings['name'], workdir=workspace_settings['path'])
         command_args.update(config=config)
 
-    command.run(**command_args)
+    return command.run(**command_args)
 
 
 if __name__ == '__main__':
-    execute()
+    retcode = execute()
+    import sys
+    sys.exit(retcode)

@@ -43,6 +43,7 @@ class Connection(object):
     """
 
     def __init__(self, datasource):
+        assert isinstance(datasource, Datasource), 'Invalid connection provided'
         self.datasource = datasource
 
     def load(self, table, **kwargs):

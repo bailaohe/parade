@@ -1,5 +1,6 @@
 from . import ParadeCommand
 from ..core.engine import Engine
+from ..core.task import Task
 from ..utils.log import logger
 
 
@@ -29,9 +30,13 @@ class ExecCommand(ParadeCommand):
 
         if no_dag:
             for task in tasks:
-                engine.execute(task, force=force)
+                retcode, _, _ = engine.execute(task, force=force)
+                if retcode != Task.RET_CODE_SUCCESS:
+                    return retcode
         else:
             engine.execute_dag(*tasks)
+
+        return Task.RET_CODE_SUCCESS
 
     def short_desc(self):
         return 'execute a flow or a set of tasks'

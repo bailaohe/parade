@@ -53,7 +53,7 @@ class ParadeCommand(object):
             config = kwargs['config']
             context = Context(workspace, config, workdir=workdir)
 
-        self.run_internal(context, **kwargs)
+        return self.run_internal(context, **kwargs)
 
     def run_internal(self, context, **kwargs):
         """
