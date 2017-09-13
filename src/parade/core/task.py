@@ -358,6 +358,7 @@ class APITask(Task):
 
 class Milestone(Task):
     def __init__(self):
+        Task.__init__(self)
         self._deps = []
         self._notify_success = False
 
