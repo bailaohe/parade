@@ -15,7 +15,7 @@ class MakeDAGCommand(ParadeCommand):
         dagstore = dagstore_cls(context)
 
         tasks = kwargs.get('task')
-        dag_key = kwargs.get('dag_key')
+        dag_key = kwargs.get('flow_name')
         if not dag_key:
             dag_key = context.name
         cron = kwargs.get('cron')

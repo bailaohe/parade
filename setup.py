@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
         name='parade',
-        version='0.1.11',
+        version='0.1.12',
         description='A ETL engine for pandas-based data task',
         author='He Bai',
         author_email='bailaohe@gmail.com',

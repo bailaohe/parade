@@ -30,6 +30,8 @@ class Context(object):
         d = {}
         for task in iter_classes(Task, self.name + '.task'):
             task_name = task.__module__.split('.')[-1]
+            if task_name in d:
+                raise RuntimeError("Duplicated tasks with name: " + task_name)
             d[task_name] = task()
         return d
 

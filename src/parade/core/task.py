@@ -136,7 +136,7 @@ class Task(object):
             return checkpoint_conn.create_record(self.name, self._checkpoint)
         # 重复执行就直接跳过
         logger.warn('last checkpoint {} indicates the task is already executed, bypass the execution'.format(
-                self._last_checkpoint))
+            self._last_checkpoint))
         return None
 
     def _commit(self, context, txn_id):
@@ -278,7 +278,7 @@ class ETLTask(Task):
         target_conn = context.get_connection(self.target_conn)
 
         if self.target_pkey:
-            assert isinstance(self.target_pkey, str) or isinstance(self.target_pkey, tuple),\
+            assert isinstance(self.target_pkey, str) or isinstance(self.target_pkey, tuple), \
                 "target primary key can only be of type string or tuple"
 
         if not self.target_indexes:
@@ -289,7 +289,7 @@ class ETLTask(Task):
             indexes = self.target_indexes
 
         for index in indexes:
-            assert isinstance(index, str) or isinstance(index, tuple),\
+            assert isinstance(index, str) or isinstance(index, tuple), \
                 "target indexes can only be of type string or tuple"
         target_conn.store(target_df, self.target_table,
                           if_exists=self.target_mode,
@@ -347,3 +347,16 @@ class APITask(Task):
     @property
     def export_labels(self):
         return {}
+
+
+class FlowTask(Task):
+    @property
+    def deps(self):
+        raise NotImplementedError("The deps is required")
+
+    @property
+    def notify_success(self):
+        return True
+
+    def execute(self, context, **kwargs):
+        pass
