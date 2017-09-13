@@ -170,14 +170,20 @@ class Task(object):
             txn_id = self._start(context, checkpoint_conn, **kwargs)
 
         try:
-            self._result = self.execute_internal(context, **kwargs)
-            self.on_commit(context, exec_id=txn_id)
+            # run if
+            # 1. task record is inited. or
+            # 2. checkpoint connection is not specified
+            if txn_id or not checkpoint_conn:
+                self._result = self.execute_internal(context, **kwargs)
+                self.on_commit(context, exec_id=txn_id)
+
             self._result_code = self.RET_CODE_SUCCESS
-            if self.notify_success and context.get_notifier() is not None:
-                context.get_notifier().notify_success(self.name)
 
             if checkpoint_conn and txn_id:
                 self._commit(context, checkpoint_conn, txn_id)
+
+            if self.notify_success and context.get_notifier() is not None:
+                context.get_notifier().notify_success(self.name)
 
         except Exception as e:
             logger.exception(str(e))
@@ -187,7 +193,7 @@ class Task(object):
                 context.get_notifier().notify_error(self.name, str(e))
 
             if checkpoint_conn and txn_id:
-                self._rollback(context, txn_id, e)
+                self._rollback(context, checkpoint_conn, txn_id, e)
 
     def on_commit(self, context, **kwargs):
         pass
@@ -351,7 +357,6 @@ class APITask(Task):
 
 
 class Milestone(Task):
-
     def __init__(self):
         self._deps = []
         self._notify_success = False
@@ -375,4 +380,3 @@ class Milestone(Task):
     @property
     def notify_success(self):
         return self._notify_success
-
