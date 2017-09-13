@@ -350,6 +350,9 @@ class APITask(Task):
 
 
 class FlowTask(Task):
+    def execute_internal(self, context, **kwargs):
+        pass
+
     @property
     def deps(self):
         raise NotImplementedError("The deps is required")
@@ -358,5 +361,3 @@ class FlowTask(Task):
     def notify_success(self):
         return True
 
-    def execute(self, context, **kwargs):
-        pass
