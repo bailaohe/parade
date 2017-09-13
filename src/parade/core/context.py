@@ -58,12 +58,21 @@ class Context(object):
 
         return self._conn_cache[conn_key]
 
+    def get_checkpoint_connection(self):
+        if not self.conf.has('checkpoint.connection'):
+            return None
+        checkpoint_conn_key = self.conf['checkpoint.connection']
+        return self.get_connection(checkpoint_conn_key)
+
     def get_notifier(self):
         """
         Get the notifier with the notify key
         :param notify_key: the key of the notifier
         :return: the notifier instance
         """
+
+        if not self.conf.has('notify'):
+            return None
 
         if not self._notifier:
             notify_conf = self.conf['notify']

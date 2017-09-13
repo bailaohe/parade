@@ -101,22 +101,15 @@ class Task(object):
         """
         return None
 
-    @property
-    def checkpoint_conn(self):
-        """
-        the connection to record the checkpoint
-        default value is the target connection
-        :return:
-        """
-        return self.target_conn
-
-    def _start(self, context, **kwargs):
+    def _start(self, context, checkpoint_conn, **kwargs):
         """
         start a checkpoint transaction before executing the task
         :param context:
         :return:
         """
-        checkpoint_conn = context.get_connection(self.checkpoint_conn)
+        if not checkpoint_conn:
+            return None
+
         checkpoint_conn.init_record_if_absent()
 
         assert isinstance(checkpoint_conn, RDBConnection)
@@ -135,21 +128,22 @@ class Task(object):
         if self._checkpoint > self._last_checkpoint or force:
             return checkpoint_conn.create_record(self.name, self._checkpoint)
         # 重复执行就直接跳过
-        logger.warn('last checkpoint {} indicates the task is already executed, bypass the execution'.format(
-            self._last_checkpoint))
+        logger.warn('last checkpoint {} indicates the task {} is already executed, bypass the execution'.format(
+            self._last_checkpoint, self.name))
         return None
 
-    def _commit(self, context, txn_id):
+    def _commit(self, context, checkpoint_conn, txn_id):
         """
         commit the checkpoint transaction if the execution succeeds
         :param context:
         :param txn_id:
         :return:
         """
-        checkpoint_conn = context.get_connection(self.checkpoint_conn)
+        if not checkpoint_conn:
+            return
         checkpoint_conn.commit_record(txn_id)
 
-    def _rollback(self, context, txn_id, err):
+    def _rollback(self, context, checkpoint_conn, txn_id, err):
         """
         rollback the checkpoint transaction if execution failed
         :param context:
@@ -157,7 +151,8 @@ class Task(object):
         :param err:
         :return:
         """
-        checkpoint_conn = context.get_connection(self.checkpoint_conn)
+        if not checkpoint_conn:
+            return
         checkpoint_conn.rollback_record(txn_id, err)
 
     def execute(self, context, **kwargs):
@@ -167,31 +162,37 @@ class Task(object):
         :param kwargs:
         :return:
         """
-        txn_id = self._start(context, **kwargs)
+
+        txn_id = None
+        checkpoint_conn = context.get_checkpoint_connection()
+
+        if checkpoint_conn is not None:
+            txn_id = self._start(context, checkpoint_conn, **kwargs)
 
         try:
-            if txn_id:
-                self._result = self.execute_internal(context, **kwargs)
-                self.on_commit(context, txn_id)
-                self._commit(context, txn_id)
-                self._result_code = self.RET_CODE_SUCCESS
+            self._result = self.execute_internal(context, **kwargs)
+            self.on_commit(context, exec_id=txn_id)
+            self._result_code = self.RET_CODE_SUCCESS
+            if self.notify_success and context.get_notifier() is not None:
+                context.get_notifier().notify_success(self.name)
 
-                if self.notify_success and context.get_notifier() is not None:
-                    context.get_notifier().notify_success(self.name)
+            if checkpoint_conn and txn_id:
+                self._commit(context, checkpoint_conn, txn_id)
 
         except Exception as e:
             logger.exception(str(e))
-            self._rollback(context, txn_id, e)
-            self.on_rollback(context, txn_id)
+            self.on_rollback(context, exec_id=txn_id)
             self._result_code = self.RET_CODE_FAIL
-
             if self.notify_fail and context.get_notifier() is not None:
                 context.get_notifier().notify_error(self.name, str(e))
 
-    def on_commit(self, context, txn_id, **kwargs):
+            if checkpoint_conn and txn_id:
+                self._rollback(context, txn_id, e)
+
+    def on_commit(self, context, **kwargs):
         pass
 
-    def on_rollback(self, context, txn_id, **kwargs):
+    def on_rollback(self, context, **kwargs):
         pass
 
     def execute_internal(self, context, **kwargs):
@@ -273,7 +274,7 @@ class ETLTask(Task):
         """
         raise NotImplementedError
 
-    def on_commit(self, context, txn_id, **kwargs):
+    def on_commit(self, context, **kwargs):
         target_df = self._result
         target_conn = context.get_connection(self.target_conn)
 
@@ -349,15 +350,29 @@ class APITask(Task):
         return {}
 
 
-class FlowTask(Task):
+class Milestone(Task):
+
+    def __init__(self):
+        self._deps = []
+        self._notify_success = False
+
+    def set_deps(self, deps):
+        self._deps = deps
+
+    def enable_notify_success(self):
+        self._notify_success = True
+
+    def disable_notify_success(self):
+        self._notify_success = False
+
     def execute_internal(self, context, **kwargs):
         pass
 
     @property
     def deps(self):
-        raise NotImplementedError("The deps is required")
+        raise self._deps
 
     @property
     def notify_success(self):
-        return True
+        return self._notify_success
 

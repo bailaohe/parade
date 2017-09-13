@@ -1,7 +1,7 @@
 FROM bailaohe/statoy:flask
 MAINTAINER He Bai <bai.he@outlook.com>
 
-RUN pip3 --no-cache-dir install parade==0.1.12
+RUN pip3 --no-cache-dir install parade==0.1.13
 RUN pip3 --no-cache-dir install redis
 RUN pip3 --no-cache-dir install beautifulsoup4
 RUN pip3 --no-cache-dir install PyGithub

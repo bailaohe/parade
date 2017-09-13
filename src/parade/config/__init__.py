@@ -21,6 +21,12 @@ class ConfigObject(object):
             return ConfigObject(conf_node)
         return str(conf_node)
 
+    def has(self, path=None):
+        try:
+            return self.get(path) is not None
+        except RuntimeError:
+            return False
+
     def to_dict(self):
         return self._dict
 

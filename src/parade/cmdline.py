@@ -1,9 +1,8 @@
-import os
-import sys
 import argparse
+import os
 
-from parade.config import ConfigRepo
 from parade.command import ParadeCommand
+from parade.config import ConfigRepo
 from parade.utils.modutils import iter_classes
 from parade.utils.workspace import inside_workspace, load_bootstrap
 

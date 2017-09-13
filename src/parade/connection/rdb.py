@@ -85,7 +85,7 @@ class RDBConnection(Connection):
                 assert isinstance(pkey, str), "update mode only support single primary key"
                 update_df = df[df[create_time_column] < last_checkpoint]
                 if not update_df.empty:
-                    logger.info("find {} records to update".format(len(update_df)))
+                    logger.info(table + ": find {} records to update".format(len(update_df)))
                     update_keys = list(update_df[pkey])
                     delete_ins = target_table.delete().where(Column(pkey).in_(update_keys))
                     _conn.execute(delete_ins)
@@ -99,16 +99,16 @@ class RDBConnection(Connection):
 
         float_columns = list(df.select_dtypes(include=['float64', 'float']).keys())
         if len(float_columns) > 0:
-            logger.warn(
-                    "Detect columns with float types {}, you better check if this is caused by NAN-integer column issue of pandas!".format(
+            logger.warn(table +
+                    ": Detect columns with float types {}, you better check if this is caused by NAN-integer column issue of pandas!".format(
                             list(float_columns)))
 
         typehints = dict()
         obj_columns = list(df.select_dtypes(include=['object']).keys())
 
         if len(obj_columns) > 0:
-            logger.warn(
-                    "Detect columns with object types {}, which is automatically converted to *VARCHAR(256)*, you can override this by specifying type hints!".format(
+            logger.warn(table +
+                    ": Detect columns with object types {}, which is automatically converted to *VARCHAR(256)*, you can override this by specifying type hints!".format(
                             list(obj_columns)))
         import sqlalchemy.types as sqltypes
         typehints.update(dict((k, sqltypes.VARCHAR(256)) for k in obj_columns))
@@ -117,7 +117,7 @@ class RDBConnection(Connection):
         _typehints = kwargs.get('typehints', {})
         from parade.type import stdtype_to_sqltype
         for col, stdtype in _typehints.items():
-            logger.info("Column [{}] is set to type [{}]".format(col, str(stdtype)))
+            logger.info(table + ": Column [{}] is set to type [{}]".format(col, str(stdtype)))
             typehints[col] = stdtype_to_sqltype(stdtype)
 
         def _chunks(_df, _chunksize):
@@ -128,12 +128,12 @@ class RDBConnection(Connection):
         # still write to database for empty dataframe
         if df.empty:
             df.to_sql(name=table, con=_conn, index=False, schema=schema, if_exists=if_exists, dtype=typehints)
-            logger.warn("Write to {}: empty dataframe".format(table))
+            logger.warn(table + ": Write to {}: empty dataframe".format(table))
         else:
             for idx, chunk in enumerate(_chunks(df, chunksize)):
                 if_exists_ = 'append' if idx > 0 else if_exists
                 chunk.to_sql(name=table, con=_conn, index=False, schema=schema, if_exists=if_exists_, dtype=typehints)
-                logger.info("Write to {}: rows #{}-#{}".format(table, idx * chunksize, (idx + 1) * chunksize))
+                logger.info(table + ": Write to {}: rows #{}-#{}".format(table, idx * chunksize, (idx + 1) * chunksize))
 
         if if_exists == 'replace':
             if pkey:

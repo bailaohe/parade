@@ -5,15 +5,6 @@ from parade.core.task import SqlETLTask
 class Db2Es(SqlETLTask):
 
     @property
-    def checkpoint_conn(self):
-        """
-        the connection to record the checkpoint
-        default value is the target connection
-        :return:
-        """
-        return 'rdb-conn'
-
-    @property
     def target_conn(self):
         """
         the target connection to write the result

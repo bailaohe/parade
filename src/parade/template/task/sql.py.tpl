@@ -33,15 +33,6 @@ class ${TaskName}(SqlETLTask):
         return None
 
     @property
-    def checkpoint_conn(self):
-        """
-        the connection to record the checkpoint
-        default value is the target connection
-        :return:
-        """
-        return self.target_conn
-
-    @property
     def target_conn(self):
         """
         the target connection to write the result

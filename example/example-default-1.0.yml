@@ -27,4 +27,5 @@ dagstore:
     project: TestProject
     notifymail: "yourmail@yourdomain.com"
     cmd: "parade exec {task}"
-
+checkpoint:
+  connection: "rdb-conn"
