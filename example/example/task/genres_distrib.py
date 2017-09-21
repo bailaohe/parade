@@ -1,9 +1,9 @@
 # -*- coding:utf-8 -*-
-from parade.core.task import SqlETLTask
+from parade.core.task import SingleSourceETLTask
 from parade.type import stdtypes
 
 
-class GenresDistrib(SqlETLTask):
+class GenresDistrib(SingleSourceETLTask):
 
     @property
     def target_conn(self):
@@ -35,7 +35,7 @@ class GenresDistrib(SqlETLTask):
         return 'rdb-conn'
 
     @property
-    def etl_sql(self):
+    def source(self):
         """
         the single sql statement to process etl
         :return:

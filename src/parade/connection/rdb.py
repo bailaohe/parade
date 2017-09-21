@@ -56,7 +56,7 @@ class RDBConnection(Connection):
     def store(self, df, table, **kwargs):
         assert isinstance(df, pd.DataFrame), "Invalid data type"
         if_exists = kwargs.get('if_exists', 'fail')
-        chunksize = kwargs.get('chunksize', None)
+        chunksize = kwargs.get('chunksize', 10000)
         pkey = kwargs.get('pkey', None)
         indexes = kwargs.get('indexes', [])
         checkpoint_column = kwargs.get('checkpoint_column', None)

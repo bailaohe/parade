@@ -1,4 +1,6 @@
+import sys
 import time
+import pandas as pd
 
 from ..connection import Connection
 from ..connection.rdb import RDBConnection
@@ -282,6 +284,11 @@ class ETLTask(Task):
 
     def on_commit(self, context, **kwargs):
         target_df = self._result
+
+        if not sys.stdout.isatty():
+            target_df.to_json(sys.stdout, orient='records')
+            return
+
         target_conn = context.get_connection(self.target_conn)
 
         if self.target_pkey:
@@ -309,28 +316,33 @@ class ETLTask(Task):
                           indexes=indexes)
 
 
-class SqlETLTask(ETLTask):
+class SingleSourceETLTask(ETLTask):
     @property
     def source_conn(self):
         """
         the source connection to write the result
         :return:
         """
+        raise NotImplementedError("The source connection is required")
+
+    @property
+    def source(self):
         raise NotImplementedError("The source is required")
 
     @property
-    def etl_sql(self):
-        """
-        the single sql statement to process etl
-        :return:
-        """
-        raise NotImplementedError("The etl-sql is required")
+    def is_source_query(self):
+        return True
+
+    def transform(self, df):
+        return df
 
     def execute_internal(self, context, **kwargs):
         source_conn = context.get_connection(self.source_conn)
         assert isinstance(source_conn, Connection)
-        df = source_conn.load_query(self.etl_sql)
-        return df
+        df = pd.read_json(sys.stdin, orient='records') if not sys.stdin.isatty() else source_conn.load_query(
+            self.source) if self.is_source_query else source_conn.load(self.source)
+        # df = source_conn.load_query(self.source) if self.is_source_query else source_conn.load(self.source)
+        return self.transform(df)
 
 
 class APITask(Task):

@@ -1,8 +1,8 @@
 # -*- coding:utf-8 -*-
-from parade.core.task import SqlETLTask
+from parade.core.task import SingleSourceETLTask
 
 
-class Db2Es(SqlETLTask):
+class Db2Es(SingleSourceETLTask):
 
     @property
     def target_conn(self):
@@ -13,7 +13,7 @@ class Db2Es(SqlETLTask):
         return 'elastic-conn'
 
     @property
-    def etl_sql(self):
+    def source(self):
         return """
         SELECT
             movie_title, genres,
