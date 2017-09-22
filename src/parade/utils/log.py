@@ -1,7 +1,8 @@
 import logging
 
 _formatter = logging.Formatter(
-        '%(asctime)s program_name %(levelname)s [%(process)d] [%(filename)s:%(lineno)s]: %(message)s')
+        # '%(asctime)s parade %(levelname)s [%(process)d] [%(filename)s:%(lineno)s]: %(message)s')
+        '%(asctime)s parade %(levelname)s [%(process)d]: %(message)s')
 
 _handler = None
 
@@ -10,7 +11,7 @@ _console_handler.setFormatter(_formatter)
 
 logger = logging.getLogger()
 logger.addHandler(_console_handler)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 def setup_logging(log_path):
