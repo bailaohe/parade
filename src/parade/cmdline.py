@@ -1,3 +1,4 @@
+import sys
 import argparse
 import os
 
@@ -36,7 +37,7 @@ def execute():
 
     if not args.command:
         parser.print_usage()
-        sys.exit(1)
+        return 0
 
     command = cmds[args.command]
     command_args = args.__dict__
@@ -68,5 +69,4 @@ def execute():
 
 if __name__ == '__main__':
     retcode = execute()
-    import sys
     sys.exit(retcode)
