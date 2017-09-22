@@ -42,7 +42,7 @@ class RDBConnection(Connection):
                 authen += ':' + self.datasource.password
             if authen is not None:
                 uripart = authen + '@' + uripart
-            uri = self.datasource.protocol + '://' + uripart
+            uri = self.datasource.protocol + '://' + uripart + '?charset=utf8'
         pandas_conn = create_engine(uri, encoding="utf-8")
         return pandas_conn
 
