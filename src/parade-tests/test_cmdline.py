@@ -1,4 +1,4 @@
-from ..cmdline import execute
+from parade.cmdline import execute
 
 
 class TestCmdline(object):
