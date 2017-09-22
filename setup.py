@@ -16,7 +16,7 @@ setup(
         package_data={'': ['*.json', '*.xml', '*.yml', '*.tpl']},
         install_requires=['pandas', 'sqlalchemy', 'requests', 'pyyaml', 'flask',
                           'flask_cors', 'flask_restful', 'psycopg2', 'mysqlclient', 'xlsxwriter',
-                          'tornado'],
+                          'tornado', 'PyGithub'],
         entry_points={
             'console_scripts': [
                 'parade = parade.cmdline:execute',
