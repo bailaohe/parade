@@ -3,7 +3,6 @@ from parade.core.task import ETLTask
 
 
 class ${TaskName}(ETLTask):
-
     @property
     def target_conn(self):
         """
@@ -50,7 +49,18 @@ class ${TaskName}(ETLTask):
         a string or a string-tuple or a string/string-tuple list to specify the indexes on the target table
         :return:
         """
+        """
+        :return:
+        """
         return []
+
+    @property
+    def target_checkpoint_column(self):
+        """
+        the columns to use as the clue of last/checkpoint in target table
+        :return:
+        """
+        return None
 
     def execute_internal(self, context, **kwargs):
         """
@@ -60,21 +70,3 @@ class ${TaskName}(ETLTask):
         :return:
         """
         raise NotImplementedError
-
-    @property
-    def checkpoint_round(self):
-        """
-        the time interval the checkpoint will align to
-        default value is 1 day
-        :return:
-        """
-        return 3600 * 24
-
-    @property
-    def checkpoint_timezone(self):
-        """
-        the timezone used when recording checkpoint
-        default: None, use the local timezone
-        :return:
-        """
-        return None

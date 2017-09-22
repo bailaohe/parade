@@ -327,13 +327,25 @@ class SingleSourceETLTask(ETLTask):
 
     @property
     def source(self):
+        """
+        the single source (table/query) to process etl
+        :return:
+        """
         raise NotImplementedError("The source is required")
 
     @property
     def is_source_query(self):
+        """
+        whether the source is query or not (table)
+        :return:
+        """
         return True
 
     def transform(self, df):
+        """
+        process to transform the source dataframe to another one
+        :return:
+        """
         return df
 
     def execute_internal(self, context, **kwargs):

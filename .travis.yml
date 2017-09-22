@@ -1,4 +1,14 @@
 language: python
+sudo: false
+
+notifications:
+  email:
+    recipients:
+      - bailaohe@gmail.com
+      - baihe@xiaomai5.com
+  on_success: change
+  on_failure: always
+
 python:
   - "3.3"
   - "3.4"
@@ -11,6 +21,6 @@ python:
 # command to install dependencies
 install:
   - pip install -U twine wheel codecov
-script:
+script: pytest
 after_success:
   - codecov

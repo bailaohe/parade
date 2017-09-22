@@ -3,35 +3,6 @@ from parade.core.task import SqlETLTask
 
 
 class ${TaskName}(SqlETLTask):
-
-    @property
-    def checkpoint_round(self):
-        """
-        the time interval the checkpoint will align to
-        default value is 1 day
-        :return:
-        """
-        return 3600 * 24
-
-    @property
-    def checkpoint_timezone(self):
-        """
-        the timezone used when recording checkpoint
-        default: None, use the local timezone
-        :return:
-        """
-        return None
-
-    @property
-    def checkpoint_column(self):
-        """
-        the column to use as the clue for checkpoint
-        :return:
-        """
-        if self.target_mode == 'append':
-            raise NotImplementedError
-        return None
-
     @property
     def target_conn(self):
         """
@@ -65,18 +36,59 @@ class ${TaskName}(SqlETLTask):
         return {}
 
     @property
+    def target_pkey(self):
+        """
+        a string or a string-tuple to specify the primary key on the target table
+        :return:
+        """
+        return None
+
+    @property
+    def target_indexes(self):
+        """
+        a string or a string-tuple or a string/string-tuple list to specify the indexes on the target table
+        :return:
+        """
+        """
+        :return:
+        """
+        return []
+
+    @property
+    def target_checkpoint_column(self):
+        """
+        the columns to use as the clue of last/checkpoint in target table
+        :return:
+        """
+        return None
+
+    @property
     def source_conn(self):
         """
         the source connection to write the result
         :return:
         """
+        raise NotImplementedError("The source connection is required")
+
+    @property
+    def source(self):
+        """
+        the single source (table/query) to process etl
+        :return:
+        """
         raise NotImplementedError("The source is required")
 
     @property
-    def etl_sql(self):
+    def is_source_query(self):
         """
-        the single sql statement to process etl
+        whether the source is query or not (table)
         :return:
         """
-        raise NotImplementedError("The etl-sql is required")
+        return True
 
+    def transform(self, df):
+        """
+        process to transform the source dataframe to another one
+        :return:
+        """
+        return df
