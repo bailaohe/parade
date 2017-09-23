@@ -24,6 +24,11 @@ class LocalFile(Connection):
             if if_exists == 'replace' and os.path.exists(target_file):
                 os.remove(target_file)
             df.to_csv(target_file, index=False, chunksize=4096)
+        elif export_type == 'json':
+            target_file = os.path.join(target_path, table + '-' + str(datetime.date.today())) + '.json'
+            if if_exists == 'replace' and os.path.exists(target_file):
+                os.remove(target_file)
+            df.to_json(target_file, orient='records')
         elif export_type == 'pickle':
             target_file = os.path.join(target_path, table + '-' + str(datetime.date.today())) + '.dat'
             if if_exists == 'replace' and os.path.exists(target_file):
