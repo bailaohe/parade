@@ -7,7 +7,7 @@ import datetime
 class LocalFile(Connection):
     def store(self, df, table, **kwargs):
         target_path = self.datasource.db if self.datasource.db else '.'
-        export_type = self.datasource.protocol if self.datasource.protocol else 'excel'
+        export_type = self.datasource.protocol if self.datasource.protocol else 'json'
         if_exists = kwargs.get('if_exists', 'replace')
 
         os.makedirs(target_path, exist_ok=True)

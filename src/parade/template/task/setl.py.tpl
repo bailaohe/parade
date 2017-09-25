@@ -1,8 +1,8 @@
 # -*- coding:utf-8 -*-
-from parade.core.task import SqlETLTask
+from parade.core.task import SingleSourceETLTask
 
 
-class ${TaskName}(SqlETLTask):
+class ${TaskName}(SingleSourceETLTask):
     @property
     def target_conn(self):
         """
