@@ -19,7 +19,7 @@ class ConfigObject(object):
 
         if isinstance(conf_node, dict):
             return ConfigObject(conf_node)
-        return str(conf_node)
+        return conf_node
 
     def has(self, path=None):
         try:

@@ -42,26 +42,3 @@ class LocalFile(Connection):
 
     def load(self, table, **kwargs):
         raise NotImplementedError
-
-    def init_record_if_absent(self):
-        raise NotImplementedError
-
-    @property
-    def accept(self):
-        raise NotImplementedError
-
-    @property
-    def can_produce(self):
-        raise NotImplementedError
-
-    def last_record(self, task_name):
-        raise NotImplementedError
-
-    def create_record(self, task_name, new_checkpoint):
-        raise NotImplementedError
-
-    def commit_record(self, txn_id):
-        raise NotImplementedError
-
-    def rollback_record(self, txn_id, err):
-        raise NotImplementedError

@@ -18,14 +18,20 @@ connection:
     password: changeme
     db: example
     uri: http://elastic:changeme@127.0.0.1:9200/
-dagstore:
+#flowstore:
+#  driver: default
+flowstore:
   driver: 'azkaban'
-  azkaban:
-    host: "http://127.0.0.1:8081"
-    username: azkaban
-    password: azkaban
-    project: TestProject
-    notifymail: "yourmail@yourdomain.com"
-    cmd: "parade exec {task}"
+  host: "http://127.0.0.1:8081"
+  username: azkaban
+  password: azkaban
+  project: TestProject
+  notifymail: "yourmail@yourdomain.com"
+  cmd: "parade exec {task}"
 checkpoint:
   connection: "rdb-conn"
+flowrunner:
+  driver: tornado
+pipe:
+  stdin: off
+  stdout: off

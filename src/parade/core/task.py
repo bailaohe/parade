@@ -103,19 +103,21 @@ class Task(object):
         """
         return None
 
-    def _start(self, context, checkpoint_conn, **kwargs):
+    def _start(self, context, **kwargs):
         """
         start a checkpoint transaction before executing the task
         :param context:
         :return:
         """
-        if not checkpoint_conn:
+        flow_id = kwargs.get('flow_id', 0)
+        flow = kwargs.get('flow', None)
+
+        if not context.sys_recorder:
             return None
 
-        checkpoint_conn.init_record_if_absent()
+        context.sys_recorder.init_record_if_absent()
 
-        assert isinstance(checkpoint_conn, RDBConnection)
-        last_record = checkpoint_conn.last_record(self.name)
+        last_record = context.sys_recorder.last_record(self.name)
         if last_record:
             self._last_checkpoint = last_record['checkpoint'].strftime('%Y-%m-%d %H:%M:%S')
 
@@ -128,24 +130,25 @@ class Task(object):
         force = kwargs.get('force', False)
 
         if self._checkpoint > self._last_checkpoint or force:
-            return checkpoint_conn.create_record(self.name, self._checkpoint)
+            return context.sys_recorder.create_record(self.name, self._checkpoint, flow_id,
+                                                        flow.name if flow else self.name)
         # 重复执行就直接跳过
         logger.warn('last checkpoint {} indicates the task {} is already executed, bypass the execution'.format(
             self._last_checkpoint, self.name))
         return None
 
-    def _commit(self, context, checkpoint_conn, txn_id):
+    def _commit(self, context, txn_id):
         """
         commit the checkpoint transaction if the execution succeeds
         :param context:
         :param txn_id:
         :return:
         """
-        if not checkpoint_conn:
+        if not context.sys_recorder:
             return
-        checkpoint_conn.commit_record(txn_id)
+        context.sys_recorder.commit_record(txn_id)
 
-    def _rollback(self, context, checkpoint_conn, txn_id, err):
+    def _rollback(self, context, txn_id, err):
         """
         rollback the checkpoint transaction if execution failed
         :param context:
@@ -153,9 +156,9 @@ class Task(object):
         :param err:
         :return:
         """
-        if not checkpoint_conn:
+        if not context.sys_recorder:
             return
-        checkpoint_conn.rollback_record(txn_id, err)
+        context.sys_recorder.rollback_record(txn_id, err)
 
     def execute(self, context, **kwargs):
         """
@@ -165,24 +168,20 @@ class Task(object):
         :return:
         """
 
-        txn_id = None
-        checkpoint_conn = context.get_checkpoint_connection()
-
-        if checkpoint_conn is not None:
-            txn_id = self._start(context, checkpoint_conn, **kwargs)
+        txn_id = self._start(context, **kwargs)
 
         try:
             # run if
             # 1. task record is inited. or
             # 2. checkpoint connection is not specified
-            if txn_id or not checkpoint_conn:
+            if txn_id or not context.sys_recorder:
                 self._result = self.execute_internal(context, **kwargs)
                 self.on_commit(context, exec_id=txn_id)
 
             self._result_code = self.RET_CODE_SUCCESS
 
-            if checkpoint_conn and txn_id:
-                self._commit(context, checkpoint_conn, txn_id)
+            if context.sys_recorder and txn_id:
+                self._commit(context, txn_id)
 
             if self.notify_success and context.get_notifier() is not None:
                 context.get_notifier().notify_success(self.name)
@@ -194,8 +193,8 @@ class Task(object):
             if self.notify_fail and context.get_notifier() is not None:
                 context.get_notifier().notify_error(self.name, str(e))
 
-            if checkpoint_conn and txn_id:
-                self._rollback(context, checkpoint_conn, txn_id, e)
+            if context.sys_recorder and txn_id:
+                self._rollback(context, txn_id, e)
 
     def on_commit(self, context, **kwargs):
         pass
@@ -285,7 +284,9 @@ class ETLTask(Task):
     def on_commit(self, context, **kwargs):
         target_df = self._result
 
-        if not sys.stdout.isatty():
+        enable_stdout = context.conf['pipe.stdout'] if context.conf.has('pipe.stdout') else False
+
+        if enable_stdout and not sys.stdout.isatty():
             target_df.to_json(sys.stdout, orient='records')
             return
 
@@ -351,9 +352,12 @@ class SingleSourceETLTask(ETLTask):
     def execute_internal(self, context, **kwargs):
         source_conn = context.get_connection(self.source_conn)
         assert isinstance(source_conn, Connection)
-        df = pd.read_json(sys.stdin, orient='records') if not sys.stdin.isatty() else source_conn.load_query(
-            self.source) if self.is_source_query else source_conn.load(self.source)
-        # df = source_conn.load_query(self.source) if self.is_source_query else source_conn.load(self.source)
+        enable_stdin = bool(context.conf['pipe.stdin'])
+        if enable_stdin:
+            df = pd.read_json(sys.stdin, orient='records') if not sys.stdin.isatty() else source_conn.load_query(
+                self.source) if self.is_source_query else source_conn.load(self.source)
+        else:
+            df = source_conn.load_query(self.source) if self.is_source_query else source_conn.load(self.source)
         return self.transform(df)
 
 
@@ -405,3 +409,52 @@ class Milestone(Task):
     @property
     def notify_success(self):
         return self._notify_success
+
+
+class Flow(object):
+    def __init__(self, name, tasks, deps=None):
+        self.name = name
+        self.tasks = tasks
+        self.deps = deps if deps else {}
+        self.forest = self.validate()
+
+    def __repr__(self):
+        return self.name + ": tasks=" + self.tasks.__repr__() + ", deps=" + self.deps.__repr__()
+
+    def validate(self):
+        """
+        util method to build flow forest
+        :param tasks: the specified tasks to form the flow
+        :return: the tasks are not dependent by others
+        """
+        assert (self.name not in self.tasks), 'flow name conflict with some tasks'
+
+        task_roots = dict()
+        for task in self.tasks:
+            if task in self.deps:
+                for dep in self.deps[task]:
+                    task_roots[dep] = task
+
+        forests = set(filter(lambda t: t not in task_roots, self.tasks))
+        return forests
+
+    def uniform(self):
+        if len(self.forest) > 1:
+            self.deps[self.name] = self.forest
+        return self
+
+    def dump(self, name=None, prefix='', tail=True, root=True):
+        if not name:
+            name = self.name
+        if root:
+            print(prefix + ' ' + name)
+        else:
+            print(prefix + ("└── " if tail else "├── ") + name)
+        children = list(self.deps[name] if name in self.deps else [])
+
+        if len(children) > 0:
+            last_child = children[-1]
+            children = children[0: -1]
+            for child in children:
+                self.dump(child, prefix + ("    " if tail else "│   "), False, False)
+            self.dump(last_child, prefix + ("    " if tail else "│   "), True, False)

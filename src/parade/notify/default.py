@@ -1,8 +1,8 @@
-from . import Notify
+from . import Notifier
 from ..utils.log import logger
 
 
-class ParadeNotifier(Notify):
+class ParadeNotifier(Notifier):
     """
     This is *JUST A PLACEHOLDER* implementation
     """

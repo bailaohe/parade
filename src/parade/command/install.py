@@ -18,7 +18,7 @@ class InstallCommand(ParadeCommand):
 
     def config_parser(self, parser):
         parser.add_argument('component_type',
-                            help='the type of the component to install, "connection" or "dagstore" at this moment')
+                            help='the type of the component to install, "connection" or "flowstore" at this moment')
         parser.add_argument('component_key', help='the key of the component to install')
 
     def run_internal(self, context, **kwargs):

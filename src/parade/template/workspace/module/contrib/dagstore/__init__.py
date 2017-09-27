@@ -1,2 +1,0 @@
-# Place contrib dagstores here
-#

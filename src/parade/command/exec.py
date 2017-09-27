@@ -34,7 +34,12 @@ class ExecCommand(ParadeCommand):
                 if retcode != Task.RET_CODE_SUCCESS:
                     return retcode
         else:
-            engine.execute_dag(*tasks)
+            flow = context.name
+            deps = dict([(task.name, task.deps) for task in context.task_dict.values() if len(task.deps) > 0])
+            flowstore = context.get_flowstore()
+            flowstore.create(flow, *tasks, deps=deps)
+            logger.info('Temporary flow [{}] created!'.format(flow))
+            engine.execute_flow(flow, force=force)
 
         return Task.RET_CODE_SUCCESS
 

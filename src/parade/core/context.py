@@ -1,15 +1,20 @@
 from collections import defaultdict
 
+from .recorder import ParadeRecorder
+from ..flowrunner import FlowRunner
+from ..connection import Connection
 from ..core.task import Task
+from ..flowstore import FlowStore
+from ..notify import Notifier
 from ..utils.modutils import get_class, iter_classes
-from ..connection import Connection, Datasource
-from ..notify import Notify
+from ..utils.log import logger
 
 
 class Context(object):
     """
     The executor context to support the ETL job executed by the engine
     """
+
     def __init__(self, name, conf, workdir=None):
         self.name = name
         self.workdir = workdir
@@ -17,10 +22,10 @@ class Context(object):
 
         self._conn_cache = defaultdict(Connection)
         self._notifier = None
-        self.task_dict = self._get_tasks()
+        self._flowstore = None
+        self._flowrunner = None
 
-    def setup(self):
-        raise NotImplementedError
+        self.task_dict = self._get_tasks()
 
     def _get_tasks(self):
         """
@@ -36,6 +41,10 @@ class Context(object):
         return d
 
     def list_tasks(self):
+        """
+        get the task namelist
+        :return:
+        """
         return self._get_tasks().keys()
 
     def get_connection(self, conn_key):
@@ -47,41 +56,74 @@ class Context(object):
 
         if conn_key not in self._conn_cache:
             conn_conf = self.conf['connection']
-            assert conn_key in conn_conf.to_dict(), 'connection {} is not configured'.format(conn_key)
-            datasource = Datasource(**conn_conf[conn_key].to_dict())
-            conn_cls = get_class(datasource.driver, Connection, 'parade.connection', self.name + '.contrib.connection')
-            if conn_cls:
-                self._conn_cache[conn_key] = conn_cls(datasource)
-
-        if conn_key not in self._conn_cache:
-            raise NotImplementedError("The connection [{}] initialization failed".format(conn_key))
+            assert conn_conf.has(conn_key), 'connection {} is not configured'.format(conn_key)
+            self._conn_cache[conn_key] = self.load_plugin('connection', Connection, plugin_key=conn_key)
 
         return self._conn_cache[conn_key]
 
-    def get_checkpoint_connection(self):
+    @property
+    def sys_recorder(self):
+        """
+        Get the parade system connection
+        :return:
+        """
         if not self.conf.has('checkpoint.connection'):
             return None
         checkpoint_conn_key = self.conf['checkpoint.connection']
-        return self.get_connection(checkpoint_conn_key)
+        conn = self.get_connection(checkpoint_conn_key)
+
+        try:
+            return ParadeRecorder(self.name, conn)
+        except:
+            logger.warn('Parade recorder initialized failed!')
+            return None
 
     def get_notifier(self):
         """
         Get the notifier with the notify key
-        :param notify_key: the key of the notifier
         :return: the notifier instance
         """
 
-        if not self.conf.has('notify'):
-            return None
-
         if not self._notifier:
-            notify_conf = self.conf['notify']
-            assert 'driver' in notify_conf.to_dict(), 'no driver provided in notify section'
-            driver = notify_conf['driver']
-            assert driver in notify_conf.to_dict(), 'no driver {} provided in notify section'.format(driver)
-
-            notifier_cls = get_class(driver, Notify, 'parade.notify', self.name + '.contrib.notify')
-            if notifier_cls:
-                self._notifier = notifier_cls(notify_conf[driver])
+            self._notifier = self.load_plugin('notify', Notifier)
 
         return self._notifier
+
+    def get_flowstore(self):
+        """
+        Get the flow store
+        :return: the flow store instance
+        """
+
+        if not self._flowstore:
+            self._flowstore = self.load_plugin('flowstore', FlowStore)
+
+        return self._flowstore
+
+    def get_flowrunner(self):
+        """
+        Get the flow store
+        :return: the flow store instance
+        """
+
+        if not self._flowrunner:
+            self._flowrunner = self.load_plugin('flowrunner', FlowRunner)
+
+        return self._flowrunner
+
+    def load_plugin(self, plugin_token, plugin_class, plugin_key=None, default_conf=None):
+        conf = default_conf
+
+        if self.conf.has(plugin_token):
+            conf = self.conf[plugin_token][plugin_key] if plugin_key else self.conf[plugin_token]
+            assert conf.has('driver'), 'no driver provided in {} section'.format(plugin_token)
+            driver = conf['driver']
+        else:
+            driver = 'default'
+
+        plugin_cls = get_class(driver, plugin_class, 'parade.' + plugin_token, self.name + '.contrib.' + plugin_token)
+        assert plugin_cls
+        plugin = plugin_cls()
+        plugin.initialize(self, conf)
+        return plugin
+

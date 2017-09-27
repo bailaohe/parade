@@ -1,12 +1,11 @@
 from ..core import Plugin
 
 
-class Notifier(Plugin):
+class FlowStore(Plugin):
     """
-    The notifier to notify task event (success/fail)
+    The flowstore to support task-flow scheduling
     """
-
-    def notify_success(self, task, **kwargs):
+    def create(self, flow, *tasks, deps=None, **kwargs):
         """
         schedule the task-flow
         :param dag_key: the flow name
@@ -15,13 +14,16 @@ class Notifier(Plugin):
         """
         raise NotImplementedError
 
-    def notify_error(self, task, reason, **kwargs):
+    def list(self):
+        raise NotImplementedError
+
+    def load(self, flow):
+        raise NotImplementedError
+
+    def delete(self, flow_name):
         """
         unschedule the task-flow
         :param flow_name: the flow name
         :return:
         """
-        raise NotImplementedError
-
-    def __init__(self, conf):
-        self.conf = conf
+        pass
