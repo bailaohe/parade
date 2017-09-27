@@ -30,8 +30,8 @@ flowstore:
   cmd: "parade exec {task}"
 checkpoint:
   connection: "rdb-conn"
-flowrunner:
-  driver: tornado
+#flowrunner:
+#  driver: tornado
 pipe:
   stdin: off
   stdout: off
