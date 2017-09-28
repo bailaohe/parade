@@ -8,7 +8,7 @@ class ListFlowCommand(ParadeCommand):
     def run_internal(self, context, **kwargs):
         flowstore = context.get_flowstore()
         flows = flowstore.list()
-        print('Workspace {} has {} flow(s):'.format(context.name, len(flows)))
+        print('Workspace [{}] has {} flow(s):'.format(context.name, len(flows)))
         for flow_id, flow_name in enumerate(flows):
             print("#{}: {}".format(flow_id + 1, flow_name))
 
