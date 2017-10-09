@@ -131,7 +131,7 @@ class Task(object):
 
         if self._checkpoint > self._last_checkpoint or force:
             return context.sys_recorder.create_record(self.name, self._checkpoint, flow_id,
-                                                        flow.name if flow else self.name)
+                                                      flow.name if flow else self.name)
         # 重复执行就直接跳过
         logger.warn('last checkpoint {} indicates the task {} is already executed, bypass the execution'.format(
             self._last_checkpoint, self.name))
@@ -210,6 +210,17 @@ class Task(object):
         :return: the task result
         """
         raise NotImplementedError
+
+    @property
+    def info(self):
+        return {
+            'name': self.name,
+            'class': type(self).__name__,
+            'module': type(self).__module__,
+            'bases': [x.__module__ + '.' + x.__name__ for x in type(self).__bases__],
+            # 'attrs': list(filter(lambda x: x not in dir(Task) and not x.startswith('_'), dir(task)))
+            'attrs': list(filter(lambda x: not x.startswith('_'), dir(self)))
+        }
 
 
 class ETLTask(Task):

@@ -1,20 +1,22 @@
-from concurrent.futures import ThreadPoolExecutor
-
-from parade.core.task import Flow
-from parade.flowrunner import FlowRunner
-from parade.utils.log import logger
-
 import asyncio
 from asyncio import queues
+
+from ..core.task import Flow
+from ..error.task_errors import TaskNotFoundError
+from ..flowrunner import FlowRunner
+from ..utils.log import logger
 
 
 class ParadeFlowRunner(FlowRunner):
     # the thread pool to convert block execution of task into async process
-    wait_queue = queues.Queue()
-    exec_queue = queues.Queue()
+    wait_queue = None
+    exec_queue = None
     executing_flow = None
     executing_flow_id = 0
     kwargs = {}
+
+    def initialize(self, context, conf):
+        FlowRunner.initialize(self, context, conf)
 
     def submit(self, flow, flow_id=0, **kwargs):
         """
@@ -29,8 +31,11 @@ class ParadeFlowRunner(FlowRunner):
         self.kwargs = kwargs
 
         for task_name in self.executing_flow.tasks:
-            assert task_name in self.context.task_dict, 'task {} not found'.format(task_name)
-        io_loop = asyncio.get_event_loop()
+            self.context.get_task(task_name)
+        io_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(io_loop)
+        self.wait_queue = queues.Queue()
+        self.exec_queue = queues.Queue()
         io_loop.run_until_complete(self.execute_dag_ioloop())
         io_loop.close()
 
@@ -83,7 +88,7 @@ class ParadeFlowRunner(FlowRunner):
                     logger.info("task [{}] is executing, pass ...".format(next_task_name))
                     return
 
-                next_task = self.context.task_dict[next_task_name]
+                next_task = self.context.get_task(next_task_name)
                 task_deps = self.executing_flow.deps.get(next_task_name, set())
                 # if len(task_deps) > 0:
                 #     logger.debug(

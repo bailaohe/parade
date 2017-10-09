@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+from ..error.task_errors import DuplicatedTaskExistError, TaskNotFoundError
 from .recorder import ParadeRecorder
 from ..flowrunner import FlowRunner
 from ..connection import Connection
@@ -25,27 +26,31 @@ class Context(object):
         self._flowstore = None
         self._flowrunner = None
 
-        self.task_dict = self._get_tasks()
-
-    def _get_tasks(self):
+    def load_tasks(self, name=None, task_class=Task):
         """
         generate the task dict [task_key => task_obj]
         :return:
         """
         d = {}
-        for task in iter_classes(Task, self.name + '.task'):
-            task_name = task.__module__.split('.')[-1]
+        for task_class in iter_classes(task_class, self.name + '.task'):
+            task = task_class()
+            task_name = task.name
+            if name and task_name != name:
+                continue
             if task_name in d:
-                raise RuntimeError("Duplicated tasks with name: " + task_name)
-            d[task_name] = task()
+                raise DuplicatedTaskExistError(task=task_name)
+            d[task_name] = task
         return d
 
-    def list_tasks(self):
+    def get_task(self, name, task_class=Task):
+        return self.load_tasks(name, task_class=task_class)[name]
+
+    def list_tasks(self, task_class=Task):
         """
         get the task namelist
         :return:
         """
-        return self._get_tasks().keys()
+        return self.load_tasks(task_class=task_class).keys()
 
     def get_connection(self, conn_key):
         """

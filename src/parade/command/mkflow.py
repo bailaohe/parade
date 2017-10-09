@@ -15,7 +15,7 @@ class MakeFlowCommand(ParadeCommand):
             flow = context.name
             tasks = context.list_tasks()
             logger.info('no task provided, use detected {} tasks in workspace {}'.format(len(tasks), tasks))
-            deps = dict([(task.name, task.deps) for task in context.task_dict.values() if len(task.deps) > 0])
+            deps = dict([(task.name, task.deps) for task in context.load_tasks().values() if len(task.deps) > 0])
         else:
             flow = flow_and_task[0]
             tasks = flow_and_task[1:]

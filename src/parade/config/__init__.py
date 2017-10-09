@@ -4,6 +4,12 @@ class ConfigObject(object):
             raise TypeError('Can only accept dict')
         self._dict = value
 
+    def get_or_else(self, path=None, default=None):
+        try:
+            return self.get(path)
+        except RuntimeError:
+            return default
+
     def get(self, path=None):
 
         if not path:
