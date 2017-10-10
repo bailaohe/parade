@@ -1,6 +1,7 @@
 
 import pandas as pd
 from sqlalchemy import create_engine, MetaData, Column, Table
+from sqlalchemy.exc import NoSuchTableError
 
 from parade.utils.log import logger
 from . import Connection
@@ -41,32 +42,35 @@ class RDBConnection(Connection):
 
         _conn = self.open()
 
-        if if_exists == 'append' or if_exists == 'update':
-            target_table = Table(table, MetaData(), autoload=True, autoload_with=_conn)
-            assert checkpoint_column is not None, "checkpoint_column is required in update mode!"
-            assert (isinstance(checkpoint_column, tuple) and len(checkpoint_column) == 2) or isinstance(
-                checkpoint_column, str), "checkpoint_column can only be str or 2-tuple!"
+        try:
+            if if_exists == 'append' or if_exists == 'update':
+                target_table = Table(table, MetaData(), autoload=True, autoload_with=_conn)
+                assert checkpoint_column is not None, "checkpoint_column is required in update mode!"
+                assert (isinstance(checkpoint_column, tuple) and len(checkpoint_column) == 2) or isinstance(
+                    checkpoint_column, str), "checkpoint_column can only be str or 2-tuple!"
 
-            if isinstance(checkpoint_column, tuple):
-                (create_time_column, update_time_column) = checkpoint_column
-            else:
-                create_time_column = checkpoint_column
-                update_time_column = checkpoint_column
+                if isinstance(checkpoint_column, tuple):
+                    (create_time_column, update_time_column) = checkpoint_column
+                else:
+                    create_time_column = checkpoint_column
+                    update_time_column = checkpoint_column
 
-            # delete extra records over last checkpoint in append/update mode
-            clear_ins = target_table.delete().where(Column(update_time_column) >= last_checkpoint)
-            _conn.execute(clear_ins)
+                # delete extra records over last checkpoint in append/update mode
+                clear_ins = target_table.delete().where(Column(update_time_column) >= last_checkpoint)
+                _conn.execute(clear_ins)
 
-            if if_exists == 'update':
-                assert pkey is not None, "primary key is required in update mode!"
-                assert isinstance(pkey, str), "update mode only support single primary key"
-                update_df = df[df[create_time_column] < last_checkpoint]
-                if not update_df.empty:
-                    logger.info(table + ": find {} records to update".format(len(update_df)))
-                    update_keys = list(update_df[pkey])
-                    delete_ins = target_table.delete().where(Column(pkey).in_(update_keys))
-                    _conn.execute(delete_ins)
-                if_exists = 'append'
+                if if_exists == 'update':
+                    assert pkey is not None, "primary key is required in update mode!"
+                    assert isinstance(pkey, str), "update mode only support single primary key"
+                    update_df = df[df[create_time_column] < last_checkpoint]
+                    if not update_df.empty:
+                        logger.info(table + ": find {} records to update".format(len(update_df)))
+                        update_keys = list(update_df[pkey])
+                        delete_ins = target_table.delete().where(Column(pkey).in_(update_keys))
+                        _conn.execute(delete_ins)
+                    if_exists = 'append'
+        except NoSuchTableError:
+            if_exists = 'replace'
 
         schema = None
         if table.find('.') >= 0:

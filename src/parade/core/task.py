@@ -363,7 +363,7 @@ class SingleSourceETLTask(ETLTask):
     def execute_internal(self, context, **kwargs):
         source_conn = context.get_connection(self.source_conn)
         assert isinstance(source_conn, Connection)
-        enable_stdin = bool(context.conf['pipe.stdin'])
+        enable_stdin = bool(context.conf.get_or_else('pipe.stdin', False))
         if enable_stdin:
             df = pd.read_json(sys.stdin, orient='records') if not sys.stdin.isatty() else source_conn.load_query(
                 self.source) if self.is_source_query else source_conn.load(self.source)
