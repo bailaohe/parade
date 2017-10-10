@@ -111,3 +111,5 @@ logs/
 tasks
 
 tasks/
+example-tmp/
+xiaomai-stats

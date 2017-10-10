@@ -62,7 +62,7 @@ class Context(object):
         if conn_key not in self._conn_cache:
             conn_conf = self.conf['connection']
             assert conn_conf.has(conn_key), 'connection {} is not configured'.format(conn_key)
-            self._conn_cache[conn_key] = self.load_plugin('connection', Connection, plugin_key=conn_key)
+            self._conn_cache[conn_key] = self._load_plugin('connection', Connection, plugin_key=conn_key)
 
         return self._conn_cache[conn_key]
 
@@ -90,7 +90,7 @@ class Context(object):
         """
 
         if not self._notifier:
-            self._notifier = self.load_plugin('notify', Notifier)
+            self._notifier = self._load_plugin('notify', Notifier)
 
         return self._notifier
 
@@ -101,7 +101,7 @@ class Context(object):
         """
 
         if not self._flowstore:
-            self._flowstore = self.load_plugin('flowstore', FlowStore)
+            self._flowstore = self._load_plugin('flowstore', FlowStore)
 
         return self._flowstore
 
@@ -112,11 +112,26 @@ class Context(object):
         """
 
         if not self._flowrunner:
-            self._flowrunner = self.load_plugin('flowrunner', FlowRunner)
+            self._flowrunner = self._load_plugin('flowrunner', FlowRunner)
 
         return self._flowrunner
 
-    def load_plugin(self, plugin_token, plugin_class, plugin_key=None, default_conf=None):
+    def load(self, table, conn=None, **kwargs):
+        if not conn:
+            raise ValueError('connection not provided')
+        return self.get_connection(conn).load(table, **kwargs)
+
+    def load_query(self, query, conn=None, **kwargs):
+        if not conn:
+            raise ValueError('connection not provided')
+        return self.get_connection(conn).load_query(query, **kwargs)
+
+    def store(self, df, table, conn=None, **kwargs):
+        if not conn:
+            raise ValueError('connection not provided')
+        return self.get_connection(conn).store(df, table, **kwargs)
+
+    def _load_plugin(self, plugin_token, plugin_class, plugin_key=None, default_conf=None):
         conf = default_conf
 
         if self.conf.has(plugin_token):
