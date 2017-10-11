@@ -71,7 +71,7 @@ class DebugCommand(ParadeCommand):
         os.system('jupyter notebook {}.ipynb'.format(task.name))
 
     def short_desc(self):
-        return 'debug'
+        return 'debug a specified task in notebook'
 
     def config_parser(self, parser):
         parser.add_argument('task', help='the task to debug')
