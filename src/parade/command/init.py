@@ -5,7 +5,7 @@ from os.path import join, exists, abspath
 from shutil import move, ignore_patterns
 
 import parade
-from parade.utils.misc import copytree
+from ..utils.misc import copytree
 from . import ParadeCommand
 from ..utils.template import string_camelcase, render_templatefile
 

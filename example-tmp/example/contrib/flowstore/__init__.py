@@ -1,2 +1,0 @@
-# Place contrib flowstores here
-#

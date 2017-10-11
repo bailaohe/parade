@@ -1,8 +1,0 @@
-workspace:
-  name: example
-config:
-  name: example
-  driver: yaml
-  profile: default
-  version: 1.0
-  uri: "{name}-{profile}-{version}.yml"

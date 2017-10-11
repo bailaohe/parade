@@ -1,0 +1,12 @@
+{
+ "language": "python",
+ "argv": [
+  "python",
+  "-m",
+  "ipykernel_launcher",
+  "--profile=parade",
+  "-f",
+  "{connection_file}"
+ ],
+ "display_name": "Python (Parade)"
+}
