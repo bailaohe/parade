@@ -27,7 +27,11 @@ class Task(object):
         self._attributes = {}
         self._result_code = self.RET_CODE_SUCCESS
         self._last_checkpoint = self.DEFAULT_CHECKPOINT
-        self._checkpoint = self.DEFAULT_CHECKPOINT
+
+        now_ts = int(time.time())
+        init_ts = datetime_str_to_timestamp(self.DEFAULT_CHECKPOINT, tz=self.checkpoint_timezone)
+        checkpoint_ts = now_ts - (now_ts - init_ts) % self.checkpoint_round
+        self._checkpoint = timestamp_to_datetime(checkpoint_ts).strftime('%Y-%m-%d %H:%M:%S')
 
     @property
     def name(self):
