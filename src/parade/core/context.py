@@ -146,4 +146,3 @@ class Context(object):
         plugin = plugin_cls()
         plugin.initialize(self, conf)
         return plugin
-

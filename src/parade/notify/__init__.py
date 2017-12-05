@@ -23,5 +23,3 @@ class Notifier(Plugin):
         """
         raise NotImplementedError
 
-    def __init__(self, conf):
-        self.conf = conf
