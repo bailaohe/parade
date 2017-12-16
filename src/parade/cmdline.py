@@ -3,7 +3,7 @@ import argparse
 import os
 
 from parade.command import ParadeCommand
-from parade.config import ConfigRepo
+from parade.config import ConfigStore
 from parade.utils.modutils import iter_classes
 from parade.utils.workspace import inside_workspace, load_bootstrap
 
@@ -18,7 +18,7 @@ def _get_commands(in_workspace):
 
 
 def _get_config_repo(driver, uri, workdir=None):
-    for repo in iter_classes(ConfigRepo, 'parade.config', class_filter=lambda cls: cls != ConfigRepo):
+    for repo in iter_classes(ConfigStore, 'parade.config', class_filter=lambda cls: cls != ConfigStore):
         repo_name = repo.__module__.split('.')[-1]
         if repo_name == driver:
             return repo(uri, workdir=workdir)

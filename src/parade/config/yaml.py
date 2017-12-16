@@ -1,10 +1,10 @@
 import requests
 import yaml
 
-from . import ConfigRepo
+from . import ConfigStore
 
 
-class YamlConfig(ConfigRepo):
+class YamlConfig(ConfigStore):
     def load_internal(self, app_name, profile='default', **kwargs):
         """
         Load the config from a spring cloud server.
