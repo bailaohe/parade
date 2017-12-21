@@ -13,7 +13,7 @@ setup(
     package_dir=({'parade': 'src/parade'}),
     zip_safe=False,
     include_package_data=True,
-    package_data={'': ['*.json', '*.xml', '*.yml', '*.tpl']},
+    #package_data={'': ['*.json', '*.xml', '*.yml', '*.tpl']},
     install_requires=['pandas', 'sqlalchemy', 'requests', 'pyyaml', 'flask',
                       'flask_cors', 'flask_restful', 'psycopg2', 'mysqlclient', 'xlsxwriter',
                       'PyGithub', 'pymongo'],

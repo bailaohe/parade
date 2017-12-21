@@ -26,7 +26,7 @@ class NotebookCommand(ParadeCommand):
     @staticmethod
     def _init_jupyter(jupyter_path):
         if not os.path.exists(jupyter_path):
-            jupyter_source_dir = os.path.join(parade.__path__[0], 'template', 'workspace', '.jupyter')
+            jupyter_source_dir = os.path.join(parade.__path__[0], 'template', 'workspace', 'jupyter')
             copytree(jupyter_source_dir, jupyter_path, IGNORE)
 
         os.environ['JUPYTER_PATH'] = jupyter_path
