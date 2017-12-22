@@ -4,6 +4,7 @@ from . import ParadeCommand
 def _create_app(context):
     from flask import Flask
     from flask_cors import CORS
+    from flask_socketio import SocketIO
 
     app = Flask(context.name)
     CORS(app)
@@ -12,8 +13,11 @@ def _create_app(context):
 
     from ..api import parade_blueprint
     app.register_blueprint(parade_blueprint)
+    socketio = SocketIO(app)
 
-    return app
+    context.webapp = app
+
+    return app, socketio
 
 
 class ServerCommand(ParadeCommand):
@@ -21,10 +25,11 @@ class ServerCommand(ParadeCommand):
 
     def run_internal(self, context, **kwargs):
         port = int(kwargs.get('port', 5000))
-        app = _create_app(context)
+        app, socketio = _create_app(context)
         debug = context.conf.get_or_else('debug', False)
 
-        app.run(host="0.0.0.0", port=port, debug=debug)
+        socketio = app.extensions['socketio']
+        socketio.run(app, host="0.0.0.0", port=port, debug=debug, log_output=False)
 
     def short_desc(self):
         return 'start a parade api server'

@@ -19,15 +19,14 @@ class ExecCommand(ParadeCommand):
         force = kwargs.get('force')
         nodep = kwargs.get('nodep')
 
-        if len(tasks) == 1:
-            logger.info('single task {} provided, ignore its dependencies'.format(tasks[0]))
-            task = tasks[0]
+        # if len(tasks) == 1:
+        #     logger.info('single task {} provided, ignore its dependencies'.format(tasks[0]))
+        #     task = tasks[0]
+        #
+        #     retcode, _, _ = engine.execute(task, force=force)
+        #     return retcode
 
-            retcode, _, _ = engine.execute(task, force=force)
-            return retcode
-
-        engine.execute_async(tasks=tasks, force=force, nodep=nodep)
-        return Task.RET_CODE_SUCCESS
+        return engine.execute_async(tasks=tasks, force=force, nodep=nodep)
 
     def short_desc(self):
         return 'execute a flow or a set of tasks'

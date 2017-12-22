@@ -151,6 +151,7 @@ class Task(object):
         if not context.sys_recorder:
             return
         context.sys_recorder.commit_record(txn_id)
+        context.end_task(self, txn_id, True)
 
     def _rollback(self, context, txn_id, err):
         """
@@ -163,6 +164,7 @@ class Task(object):
         if not context.sys_recorder:
             return
         context.sys_recorder.rollback_record(txn_id, err)
+        context.end_task(self, txn_id, False)
 
     def execute(self, context, **kwargs):
         """

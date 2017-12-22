@@ -1,7 +1,7 @@
 import asyncio
 from asyncio import queues
 
-from ..core.task import Flow
+from ..core.task import Flow, Task
 from ..error.task_errors import TaskNotFoundError
 from ..flowrunner import FlowRunner
 from ..utils.log import logger
@@ -36,8 +36,9 @@ class ParadeFlowRunner(FlowRunner):
         asyncio.set_event_loop(io_loop)
         self.wait_queue = queues.Queue()
         self.exec_queue = queues.Queue()
-        io_loop.run_until_complete(self.execute_dag_ioloop())
+        ret = io_loop.run_until_complete(self.execute_dag_ioloop())
         io_loop.close()
+        return ret
 
     @asyncio.coroutine
     def daemon_loop(self):
@@ -53,7 +54,7 @@ class ParadeFlowRunner(FlowRunner):
         # add to wait queue, waiting to execute
         yield from self.wait_queue.put(set(self.executing_flow.tasks))
 
-        executing, done = set(), set()
+        executing, successed, failed = set(), set(), set()
 
         @asyncio.coroutine
         def _produce_tasks():
@@ -66,7 +67,8 @@ class ParadeFlowRunner(FlowRunner):
 
             # reset the *executing* and *done* set
             executing.clear()
-            done.clear()
+            successed.clear()
+            failed.clear()
 
             # retrieve the task-DAG from wait-queue to exec-queue
             sched_task_names = yield from self.wait_queue.get()
@@ -90,10 +92,9 @@ class ParadeFlowRunner(FlowRunner):
 
                 next_task = self.context.get_task(next_task_name)
                 task_deps = self.executing_flow.deps.get(next_task_name, set())
-                # if len(task_deps) > 0:
-                #     logger.debug(
-                #         "task [{}] has {} dependant task(s), {}".format(next_task_name, len(task_deps), task_deps))
-                done_deps = set(filter(lambda x: x in done, task_deps))
+
+                done_deps = set(filter(lambda x: x in successed, task_deps))
+                fail_deps = set(filter(lambda x: x in failed, task_deps))
 
                 if len(task_deps) == len(done_deps):
                     # all dependencies are done
@@ -107,9 +108,16 @@ class ParadeFlowRunner(FlowRunner):
                     #                                    flow=self.executing_flow, **self.kwargs)
                     next_task.execute(self.context, flow_id=self.executing_flow_id, flow=self.executing_flow,
                                       **self.kwargs)
-                    logger.info("task [{}] Executed successfully".format(next_task_name))
-                    done.add(next_task_name)
-
+                    if next_task.result_code == Task.RET_CODE_SUCCESS:
+                        logger.info("task [{}] executed successfully".format(next_task_name))
+                        successed.add(next_task_name)
+                    else:
+                        logger.info("task [{}] executed failed".format(next_task_name))
+                        failed.add(next_task_name)
+                elif len(fail_deps) > 0:
+                    logger.info("task [{}] canceled since its dependencies [{}] failed".format(next_task_name, fail_deps))
+                    failed.add(next_task_name)
+                    self.context.sys_recorder.cancel_record()
                 else:
                     # otherwise, re-put the task into the end of the queue
                     # sleep for 1 second
@@ -138,4 +146,13 @@ class ParadeFlowRunner(FlowRunner):
             pass
 
         yield from self.exec_queue.join()
-        assert executing == done
+        assert len(executing) == len(successed) + len(failed)
+
+        retcode = Task.RET_CODE_SUCCESS if len(failed) == 0 else Task.RET_CODE_FAIL
+
+        if retcode == Task.RET_CODE_SUCCESS:
+            self.context.sys_recorder.commit_flow(self.executing_flow_id)
+        else:
+            self.context.sys_recorder.fail_flow(self.executing_flow_id)
+
+        return retcode

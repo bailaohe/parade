@@ -16,10 +16,11 @@ class Context(object):
     The executor context to support the ETL job executed by the engine
     """
 
-    def __init__(self, name, conf, workdir=None):
+    def __init__(self, name, conf, workdir=None, **kwargs):
         self.name = name
         self.workdir = workdir
         self.conf = conf
+        self.kwargs = kwargs
 
         self._conn_cache = defaultdict(Connection)
         self._notifier = None
@@ -146,3 +147,15 @@ class Context(object):
         plugin = plugin_cls()
         plugin.initialize(self, conf)
         return plugin
+
+    def end_task(self, task, exec_id, success):
+        if hasattr(self, 'webapp'):
+            socketio = self.webapp.extensions['socketio']
+            if success:
+                socketio.emit('task-success', {
+                    'task': task.name,
+                    'task-id': exec_id,
+
+                }, namespace='/exec')
+            else:
+                socketio.emit('task-failed', task, namespace='/exec')

@@ -97,5 +97,6 @@ class Engine(object):
 
         if new_thread:
             self.thread_pool.submit(flowrunner.submit, flow, flow_id=flow_id, force=force)
+            return flow_id
         else:
-            flowrunner.submit(flow, flow_id=flow_id, force=force)
+            return flowrunner.submit(flow, flow_id=flow_id, force=force)

@@ -95,3 +95,24 @@ class ParadeRecorder(object):
             where(self._task_table.c.id == txn_id). \
             values(status=2, message=str(err))
         _conn.execute(sql)
+
+    def cancel_record(self, txn_id, failed_deps):
+        _conn = self.conn.open()
+        sql = self._task_table.update(). \
+            where(self._task_table.c.id == txn_id). \
+            values(status=3, message='canceled for failed dependencies [{}]'.format(failed_deps))
+        _conn.execute(sql)
+
+    def commit_flow(self, flow_id):
+        _conn = self.conn.open()
+        sql = self._flow_table.update(). \
+            where(self._flow_table.c.id == flow_id). \
+            values(status=1, commit_time=functions.now())
+        _conn.execute(sql)
+
+    def fail_flow(self, flow_id):
+        _conn = self.conn.open()
+        sql = self._flow_table.update(). \
+            where(self._flow_table.c.id == flow_id). \
+            values(status=2)
+        _conn.execute(sql)
