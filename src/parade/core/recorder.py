@@ -1,3 +1,5 @@
+import json
+
 from sqlalchemy import MetaData, Column, types, Index, Table
 import datetime
 from sqlalchemy.sql import functions
@@ -116,3 +118,19 @@ class ParadeRecorder(object):
             where(self._flow_table.c.id == flow_id). \
             values(status=2)
         _conn.execute(sql)
+
+    def load_flows(self, executing=True, page_size=0, page_no=1):
+        query = self._flow_table.select().where(
+            self._flow_table.c.status == 0) if executing else self._flow_table.select().where(
+            self._flow_table.c.status > 0)
+        if page_size > 0:
+            query = query.limit(page_size).offset((page_no - 1) * page_size)
+        df = self.conn.load_query(str(query.compile(compile_kwargs={"literal_binds": True})))
+        return json.loads(df.to_json(orient='records'))
+
+    def load_flow_tasks(self, flow_id, page_size=0, page_no=1):
+        query = self._task_table.select().where(self._task_table.c.flow_id == flow_id)
+        if page_size > 0:
+            query = query.limit(page_size).offset((page_no - 1) * page_size)
+        df = self.conn.load_query(str(query.compile(compile_kwargs={"literal_binds": True})))
+        return json.loads(df.to_json(orient='records'))
