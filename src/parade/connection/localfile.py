@@ -1,6 +1,6 @@
 from io import BytesIO
 
-from parade.connection import Connection
+from ..connection import Connection
 import pandas as pd
 import os
 import datetime
