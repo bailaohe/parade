@@ -87,13 +87,8 @@ class Engine(object):
         return self._execute_flow(flow, new_thread=new_thread, force=force)
 
     def _execute_flow(self, flow, new_thread=False, force=False):
-        flow_id = 0
+        flow_id = self.context.on_flow_start(flow)
         flowrunner = self.context.get_flowrunner()
-        sys_recorder = self.context.sys_recorder
-        if sys_recorder:
-            sys_recorder.init_record_if_absent()
-            # TODO maybe we should set the flow state to `pending` here
-            flow_id = sys_recorder.create_flow_record(flow.name, flow.tasks)
 
         if new_thread:
             self.thread_pool.submit(flowrunner.submit, flow, flow_id=flow_id, force=force)

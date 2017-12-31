@@ -16,17 +16,21 @@ class Context(object):
     The executor context to support the ETL job executed by the engine
     """
 
-    def __init__(self, name, conf, workdir=None, **kwargs):
+    def __init__(self, name, conf, workdir=None, master=None, **kwargs):
         self.name = name
         self.workdir = workdir
         self.conf = conf
+        self.master = master
         self.kwargs = kwargs
 
+        self._task_dict = defaultdict(Task)
         self._conn_cache = defaultdict(Connection)
         self._notifier = None
         self._flowstore = None
         self._flowrunner = None
 
+    # ========================Context as a task store=========================
+    # ========================================================================
     def load_tasks(self, name=None, task_class=Task):
         """
         generate the task dict [task_key => task_obj]
@@ -44,7 +48,11 @@ class Context(object):
         return d
 
     def get_task(self, name, task_class=Task):
-        return self.load_tasks(name, task_class=task_class)[name]
+        if name in self._task_dict:
+            return self._task_dict[name]
+        task = self.load_tasks(name, task_class=task_class)[name]
+        self._task_dict[name] = task
+        return task
 
     def list_tasks(self, task_class=Task):
         """
@@ -53,6 +61,10 @@ class Context(object):
         """
         return self.load_tasks(task_class=task_class).keys()
 
+    # ========================================================================
+
+    # ====================Context as a connection store=======================
+    # ========================================================================
     def get_connection(self, conn_key):
         """
         Get the connection with the connection key
@@ -67,34 +79,25 @@ class Context(object):
 
         return self._conn_cache[conn_key]
 
-    @property
-    def sys_recorder(self):
-        """
-        Get the parade system connection
-        :return:
-        """
-        if not self.conf.has('checkpoint.connection'):
-            return None
-        checkpoint_conn_key = self.conf['checkpoint.connection']
-        conn = self.get_connection(checkpoint_conn_key)
+    def load(self, table, conn=None, **kwargs):
+        if not conn:
+            raise ValueError('connection not provided')
+        return self.get_connection(conn).load(table, **kwargs)
 
-        try:
-            return ParadeRecorder(self.name, conn)
-        except:
-            logger.warn('Parade recorder initialized failed!')
-            return None
+    def load_query(self, query, conn=None, **kwargs):
+        if not conn:
+            raise ValueError('connection not provided')
+        return self.get_connection(conn).load_query(query, **kwargs)
 
-    def get_notifier(self):
-        """
-        Get the notifier with the notify key
-        :return: the notifier instance
-        """
+    def store(self, df, table, conn=None, **kwargs):
+        if not conn:
+            raise ValueError('connection not provided')
+        return self.get_connection(conn).store(df, table, **kwargs)
 
-        if not self._notifier:
-            self._notifier = self._load_plugin('notify', Notifier)
+    # ========================================================================
 
-        return self._notifier
-
+    # ====================Context as other plugin store=======================
+    # ========================================================================
     def get_flowstore(self):
         """
         Get the flow store
@@ -117,21 +120,6 @@ class Context(object):
 
         return self._flowrunner
 
-    def load(self, table, conn=None, **kwargs):
-        if not conn:
-            raise ValueError('connection not provided')
-        return self.get_connection(conn).load(table, **kwargs)
-
-    def load_query(self, query, conn=None, **kwargs):
-        if not conn:
-            raise ValueError('connection not provided')
-        return self.get_connection(conn).load_query(query, **kwargs)
-
-    def store(self, df, table, conn=None, **kwargs):
-        if not conn:
-            raise ValueError('connection not provided')
-        return self.get_connection(conn).store(df, table, **kwargs)
-
     def _load_plugin(self, plugin_token, plugin_class, plugin_key=None, default_conf=None):
         conf = default_conf
 
@@ -148,14 +136,93 @@ class Context(object):
         plugin.initialize(self, conf)
         return plugin
 
-    def end_task(self, task, exec_id, success):
+    # ========================================================================
+
+    @property
+    def sys_recorder(self):
+        """
+        Get the parade system connection
+        :return:
+        """
+        if not self.conf.has('checkpoint.connection'):
+            return None
+        checkpoint_conn_key = self.conf['checkpoint.connection']
+        conn = self.get_connection(checkpoint_conn_key)
+
+        try:
+            return ParadeRecorder(self.name, conn)
+        except:
+            logger.warn('Parade recorder initialized failed!')
+            return None
+
+    def on_flow_start(self, flow):
+        # TODO maybe we should set the flow state to `pending` here
+        self.sys_recorder.init_record_tables()
+        return self.sys_recorder.create_flow_record(flow.name, flow.tasks)
+
+    def on_flow_success(self, flow_id):
+        self.sys_recorder.mark_flow_success(flow_id)
+
+    def on_flow_failed(self, flow_id):
+        self.sys_recorder.mark_flow_failed(flow_id)
+
+    def on_task_pending(self, task, checkpoint, flow_id, flow):
+        self.sys_recorder.init_record_tables()
+        return self.sys_recorder.create_task_record(task, checkpoint, flow_id, flow)
+
+    def on_task_cancelled(self, task, failed_deps):
+        self.sys_recorder.mark_task_cancelled(task._exec_id, failed_deps)
+
         if hasattr(self, 'webapp'):
             socketio = self.webapp.extensions['socketio']
-            if success:
-                socketio.emit('task-success', {
-                    'task': task.name,
-                    'task-id': exec_id,
+            socketio.emit('task-cancelled', {
+                'task': task.name,
+                'task-id': task._exec_id
+            }, namespace='/exec-' + str(task._flow_id))
 
-                }, namespace='/exec')
-            else:
-                socketio.emit('task-failed', task, namespace='/exec')
+    def on_task_start(self, task):
+        self.sys_recorder.mark_task_start(task._exec_id)
+
+        if hasattr(self, 'webapp'):
+            socketio = self.webapp.extensions['socketio']
+            socketio.emit('task-start', {
+                'task': task.name,
+                'task-id': task._exec_id
+            }, namespace='/exec-' + str(task._flow_id))
+
+    def on_task_success(self, task):
+        self.sys_recorder.mark_task_success(task._exec_id)
+
+        if hasattr(self, 'webapp'):
+            socketio = self.webapp.extensions['socketio']
+            socketio.emit('task-success', {
+                'task': task.name,
+                'task-id': task._exec_id
+            }, namespace='/exec-' + str(task._flow_id))
+
+        if task.notify_success and self.get_notifier() is not None:
+            self.get_notifier().notify_success(self.name)
+
+    def on_task_failed(self, task, err):
+        self.sys_recorder.mark_task_failed(task._exec_id, err)
+
+        if hasattr(self, 'webapp'):
+            socketio = self.webapp.extensions['socketio']
+            socketio.emit('task-failed', {
+                'task': task.name,
+                'task-id': task._exec_id
+            }, namespace='/exec-' + str(task._flow_id))
+
+        if task.notify_fail and self.get_notifier() is not None:
+            self.get_notifier().notify_error(self.name, str(err))
+
+    def get_notifier(self):
+        """
+        Get the notifier with the notify key
+        :return: the notifier instance
+        """
+
+        if not self._notifier:
+            self._notifier = self._load_plugin('notify', Notifier)
+
+        return self._notifier

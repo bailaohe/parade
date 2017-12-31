@@ -13,7 +13,7 @@ def _create_app(context):
 
     from ..api import parade_blueprint
     app.register_blueprint(parade_blueprint)
-    socketio = SocketIO(app)
+    socketio = SocketIO(app, async_mode='threading')
 
     context.webapp = app
 
@@ -28,7 +28,6 @@ class ServerCommand(ParadeCommand):
         app, socketio = _create_app(context)
         debug = context.conf.get_or_else('debug', False)
 
-        socketio = app.extensions['socketio']
         socketio.run(app, host="0.0.0.0", port=port, debug=debug, log_output=False)
 
     def short_desc(self):

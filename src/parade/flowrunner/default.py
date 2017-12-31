@@ -31,7 +31,7 @@ class ParadeFlowRunner(FlowRunner):
         self.kwargs = kwargs
 
         for task_name in self.executing_flow.tasks:
-            self.context.get_task(task_name)
+            self.context.get_task(task_name).pending(self.context, flow_id, flow.name)
         io_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(io_loop)
         self.wait_queue = queues.Queue()
@@ -104,8 +104,6 @@ class ParadeFlowRunner(FlowRunner):
                     executing.add(next_task_name)
 
                     logger.info("task [{}] start executing ...".format(next_task_name))
-                    # yield from self.thread_pool.submit(next_task.execute, self.context, flow_id=self.executing_flow_id,
-                    #                                    flow=self.executing_flow, **self.kwargs)
                     next_task.execute(self.context, flow_id=self.executing_flow_id, flow=self.executing_flow,
                                       **self.kwargs)
                     if next_task.result_code == Task.RET_CODE_SUCCESS:
@@ -114,10 +112,11 @@ class ParadeFlowRunner(FlowRunner):
                     else:
                         logger.info("task [{}] executed failed".format(next_task_name))
                         failed.add(next_task_name)
+
                 elif len(fail_deps) > 0:
                     logger.info("task [{}] canceled since its dependencies [{}] failed".format(next_task_name, fail_deps))
                     failed.add(next_task_name)
-                    self.context.sys_recorder.cancel_record()
+                    next_task.cancel(self.context, fail_deps)
                 else:
                     # otherwise, re-put the task into the end of the queue
                     # sleep for 1 second
@@ -151,8 +150,8 @@ class ParadeFlowRunner(FlowRunner):
         retcode = Task.RET_CODE_SUCCESS if len(failed) == 0 else Task.RET_CODE_FAIL
 
         if retcode == Task.RET_CODE_SUCCESS:
-            self.context.sys_recorder.commit_flow(self.executing_flow_id)
+            self.context.on_flow_success(self.executing_flow_id)
         else:
-            self.context.sys_recorder.fail_flow(self.executing_flow_id)
+            self.context.on_flow_failed(self.executing_flow_id)
 
         return retcode

@@ -18,7 +18,6 @@ class FlowListAPI(ParadeResource):
         flowstore.create(json['name'], *json['tasks'], deps=json['deps'])
 
 
-
 class FlowAPI(ParadeResource):
     """
     The api blue print to execute etl task
@@ -31,11 +30,7 @@ class FlowAPI(ParadeResource):
             flow_obj = flow_obj.uniform()
         if not flow_obj:
             abort(404, message='Flow [{}] not found.'.format(flow))
-        return {
-            'name': flow_obj.name,
-            'tasks': flow_obj.tasks,
-            'deps': dict([(t, list(d)) for (t, d) in flow_obj.deps.items()])
-        }
+        return flow_obj.to_dict()
 
     def delete(self, flow):
         flow_obj = self.context.get_flowstore().load(flow)

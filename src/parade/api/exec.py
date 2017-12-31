@@ -24,5 +24,24 @@ class ExecAPI(ParadeResource):
         engine = Engine(self.context)
         return engine.execute_async(flow, tasks, new_thread=True, force=force, nodep=nodep)
 
+    @catch_parade_error
+    def get(self):
+        parser.add_argument('executing', type=bool)
+        args = parser.parse_args()
+        executing = args.get('executing', None)
+        return self.context.sys_recorder.load_flows(executing)
+
+class ExecDetailAPI(ParadeResource):
+    @catch_parade_error
+    def get(self, id):
+        executing_flow = self.context.sys_recorder.load_flow_by_id(id)
+        exec_tasks = self.context.sys_recorder.load_flow_tasks(id)
+        flow = self.context.get_flowstore().load(executing_flow['flow']).uniform()
+
+        return {
+            'flow': flow.to_dict()
+        }
+
 
 api.add_resource(ExecAPI, '/api/exec')
+api.add_resource(ExecDetailAPI, '/api/exec/<id>')

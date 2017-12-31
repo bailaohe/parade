@@ -1,7 +1,5 @@
 from . import ParadeCommand
 from ..core.engine import Engine
-from ..core.task import Task
-from ..utils.log import logger
 
 
 class ExecCommand(ParadeCommand):
@@ -18,15 +16,6 @@ class ExecCommand(ParadeCommand):
         tasks = kwargs.get('task')
         force = kwargs.get('force')
         nodep = kwargs.get('nodep')
-
-        print(context.sys_recorder.load_flow_tasks(2))
-
-        # if len(tasks) == 1:
-        #     logger.info('single task {} provided, ignore its dependencies'.format(tasks[0]))
-        #     task = tasks[0]
-        #
-        #     retcode, _, _ = engine.execute(task, force=force)
-        #     return retcode
 
         return engine.execute_async(tasks=tasks, force=force, nodep=nodep)
 

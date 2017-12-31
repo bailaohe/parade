@@ -3,6 +3,8 @@ import json
 from sqlalchemy import MetaData, Column, types, Index, Table
 import datetime
 from sqlalchemy.sql import functions
+
+from ..core.task import Task
 from ..connection.rdb import RDBConnection
 
 
@@ -14,12 +16,13 @@ class ParadeRecorder(object):
                         Column('flow', types.String(128), nullable=False),
                         Column('task', types.String(128), nullable=False),
                         Column('flow_id', types.BigInteger, nullable=False),
-                        Column('checkpoint', types.DateTime, default=datetime.datetime.now),
+                        Column('attributes', types.Text, default="{}"),
+                        Column('start_time', types.DateTime, default=datetime.datetime.now),
                         Column('create_time', types.DateTime, default=datetime.datetime.now),
                         Column('commit_time', types.DateTime, default=datetime.datetime.now),
                         Column('update_time', types.DateTime, default=datetime.datetime.now,
                                onupdate=datetime.datetime.now),
-                        Column('status', types.Integer, default=0),
+                        Column('status', types.Integer, default=Task.STATE_PENDING),
                         Column('message', types.Text, default='OK'),
 
                         Index('idx_task_create', 'task', 'create_time'),
@@ -34,7 +37,7 @@ class ParadeRecorder(object):
                         Column('commit_time', types.DateTime, default=datetime.datetime.now),
                         Column('update_time', types.DateTime, default=datetime.datetime.now,
                                onupdate=datetime.datetime.now),
-                        Column('status', types.Integer, default=0),
+                        Column('status', types.Integer, default=Task.STATE_EXECUTING),
 
                         Index('idx_flow_create', 'flow', 'create_time'),
                         )
@@ -44,7 +47,7 @@ class ParadeRecorder(object):
         self.conn = conn
         self.project = project
 
-    def init_record_if_absent(self):
+    def init_record_tables(self):
         _conn = self.conn.open()
         if not self._task_table.exists(_conn):
             try:
@@ -57,11 +60,11 @@ class ParadeRecorder(object):
             except:
                 pass
 
-    def last_record(self, task_name):
+    def last_success_record(self, task_name):
         _conn = self.conn.open()
         _query = self._task_table.select(). \
             where(self._task_table.c.task == task_name). \
-            where(self._task_table.c.status == 1). \
+            where(self._task_table.c.status == Task.STATE_SUCCESS). \
             order_by(self._task_table.c.create_time.desc()).limit(1)
         _last_record = _conn.execute(_query).fetchone()
 
@@ -69,12 +72,14 @@ class ParadeRecorder(object):
             return dict(_last_record)
         return None
 
-    def create_record(self, task_name, new_checkpoint, flow_id, flow):
+    def create_task_record(self, task_name, attributes, flow_id, flow):
         _conn = self.conn.open()
 
         # 创建待提交checkpoint
-        ins = self._task_table.insert().values(project=self.project, flow_id=flow_id, flow=flow, task=task_name,
-                                               checkpoint=new_checkpoint)
+        ins = self._task_table.insert().values(project=self.project,
+                                               flow_id=flow_id, flow=flow,
+                                               task=task_name,
+                                               attributes=json.dumps(attributes))
         return _conn.execute(ins).inserted_primary_key[0]
 
     def create_flow_record(self, flow_name, tasks):
@@ -84,45 +89,64 @@ class ParadeRecorder(object):
         ins = self._flow_table.insert().values(project=self.project, flow=flow_name, tasks=','.join(tasks))
         return _conn.execute(ins).inserted_primary_key[0]
 
-    def commit_record(self, txn_id):
+    def mark_task_start(self, exec_id):
         _conn = self.conn.open()
         sql = self._task_table.update(). \
-            where(self._task_table.c.id == txn_id). \
-            values(status=1, commit_time=functions.now())
+            where(self._task_table.c.id == exec_id). \
+            values(status=Task.STATE_EXECUTING, start_time=functions.now(), update_time=functions.now())
         _conn.execute(sql)
 
-    def rollback_record(self, txn_id, err):
+    def mark_task_success(self, exec_id, msg='OK'):
         _conn = self.conn.open()
         sql = self._task_table.update(). \
-            where(self._task_table.c.id == txn_id). \
-            values(status=2, message=str(err))
+            where(self._task_table.c.id == exec_id). \
+            values(status=Task.STATE_SUCCESS, message=str(msg), commit_time=functions.now(), update_time=functions.now())
         _conn.execute(sql)
 
-    def cancel_record(self, txn_id, failed_deps):
+    def mark_task_failed(self, exec_id, err):
         _conn = self.conn.open()
         sql = self._task_table.update(). \
-            where(self._task_table.c.id == txn_id). \
-            values(status=3, message='canceled for failed dependencies [{}]'.format(failed_deps))
+            where(self._task_table.c.id == exec_id). \
+            values(status=Task.STATE_FAILED, message=str(err), update_time=functions.now())
         _conn.execute(sql)
 
-    def commit_flow(self, flow_id):
+    def mark_task_cancelled(self, exec_id, failed_deps):
+        _conn = self.conn.open()
+        sql = self._task_table.update(). \
+            where(self._task_table.c.id == exec_id). \
+            values(status=Task.STATE_CANCELLED, message='canceled for failed dependencies [{}]'.format(failed_deps), update_time=functions.now())
+        _conn.execute(sql)
+
+    def mark_flow_success(self, flow_id):
         _conn = self.conn.open()
         sql = self._flow_table.update(). \
             where(self._flow_table.c.id == flow_id). \
-            values(status=1, commit_time=functions.now())
+            values(status=Task.STATE_SUCCESS, commit_time=functions.now(), update_time=functions.now())
         _conn.execute(sql)
 
-    def fail_flow(self, flow_id):
+    def mark_flow_failed(self, flow_id):
         _conn = self.conn.open()
         sql = self._flow_table.update(). \
             where(self._flow_table.c.id == flow_id). \
-            values(status=2)
+            values(status=Task.STATE_FAILED, update_time=functions.now())
         _conn.execute(sql)
 
-    def load_flows(self, executing=True, page_size=0, page_no=1):
-        query = self._flow_table.select().where(
-            self._flow_table.c.status == 0) if executing else self._flow_table.select().where(
-            self._flow_table.c.status > 0)
+    def load_flow_by_id(self, exec_id):
+        _conn = self.conn.open()
+        _query = self._flow_table.select(). \
+            where(self._flow_table.c.id == exec_id)
+        exec_flow = _conn.execute(_query).fetchone()
+
+        if exec_flow is not None:
+            return dict(exec_flow)
+        return None
+
+    def load_flows(self, executing=None, page_size=0, page_no=1):
+        query = self._flow_table.select()
+        if executing is not None:
+            query = query.where(
+                self._flow_table.c.status == 0) if executing else self._flow_table.select().where(
+                self._flow_table.c.status > 0)
         if page_size > 0:
             query = query.limit(page_size).offset((page_no - 1) * page_size)
         df = self.conn.load_query(str(query.compile(compile_kwargs={"literal_binds": True})))

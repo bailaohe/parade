@@ -1,9 +1,10 @@
+import json
 import sys
 import time
+
 import pandas as pd
 
 from ..connection import Connection
-from ..connection.rdb import RDBConnection
 from ..utils.log import logger
 from ..utils.timeutils import datetime_str_to_timestamp, timestamp_to_datetime
 
@@ -12,10 +13,15 @@ class Task(object):
     """
     The task object executed by the parade engine
     """
-
-    DEFAULT_CHECKPOINT = '1970-01-01 00:00:00'
     RET_CODE_SUCCESS = 0
     RET_CODE_FAIL = 1
+
+    STATE_INIT = 0
+    STATE_PENDING = 1
+    STATE_EXECUTING = 2
+    STATE_SUCCESS = 3
+    STATE_FAILED = 4
+    STATE_CANCELLED = 5
 
     def __init__(self):
         """
@@ -26,12 +32,10 @@ class Task(object):
         self._result = None
         self._attributes = {}
         self._result_code = self.RET_CODE_SUCCESS
-        self._last_checkpoint = self.DEFAULT_CHECKPOINT
-
-        now_ts = int(time.time())
-        init_ts = datetime_str_to_timestamp(self.DEFAULT_CHECKPOINT, tz=self.checkpoint_timezone)
-        checkpoint_ts = now_ts - (now_ts - init_ts) % self.checkpoint_round
-        self._checkpoint = timestamp_to_datetime(checkpoint_ts).strftime('%Y-%m-%d %H:%M:%S')
+        self._exec_id = 0
+        self._state = self.STATE_INIT
+        self._flow_id = 0
+        self._flow = None
 
     @property
     def name(self):
@@ -79,6 +83,12 @@ class Task(object):
         return self._result_code
 
     def set_attribute(self, key, val):
+        """
+        set the task attribute
+        :param key:
+        :param val:
+        :return:
+        """
         self._attributes[key] = val
 
     @property
@@ -89,82 +99,39 @@ class Task(object):
     def notify_fail(self):
         return True
 
-    @property
-    def checkpoint_round(self):
-        """
-        the time interval the checkpoint will align to
-        default value is 1 day
-        :return:
-        """
-        return 3600 * 24
-
-    @property
-    def checkpoint_timezone(self):
-        """
-        the timezone used when recording checkpoint
-        default: None, use the local timezone
-        :return:
-        """
-        return None
-
-    def _start(self, context, **kwargs):
+    def on_start(self, context, **kwargs):
         """
         start a checkpoint transaction before executing the task
         :param context:
         :return:
         """
-        flow_id = kwargs.get('flow_id', 0)
-        flow = kwargs.get('flow', None)
 
-        if not context.sys_recorder:
-            return None
+        assert self._state == self.STATE_PENDING
+        return self.STATE_EXECUTING
 
-        context.sys_recorder.init_record_if_absent()
-
-        last_record = context.sys_recorder.last_record(self.name)
-        if last_record:
-            self._last_checkpoint = last_record['checkpoint'].strftime('%Y-%m-%d %H:%M:%S')
-
-        # 基于当前时间,进行粒度对齐后计算本次执行的checkpoint
-        now_ts = int(time.time())
-        init_ts = datetime_str_to_timestamp(self.DEFAULT_CHECKPOINT, tz=self.checkpoint_timezone)
-        checkpoint_ts = now_ts - (now_ts - init_ts) % self.checkpoint_round
-        self._checkpoint = timestamp_to_datetime(checkpoint_ts).strftime('%Y-%m-%d %H:%M:%S')
-
-        force = kwargs.get('force', False)
-
-        if self._checkpoint > self._last_checkpoint or force:
-            return context.sys_recorder.create_record(self.name, self._checkpoint, flow_id,
-                                                      flow.name if flow else self.name)
-        # 重复执行就直接跳过
-        logger.warn('last checkpoint {} indicates the task {} is already executed, bypass the execution'.format(
-            self._last_checkpoint, self.name))
-        return None
-
-    def _commit(self, context, txn_id):
+    def pending(self, context, flow_id=0, flow=None):
         """
-        commit the checkpoint transaction if the execution succeeds
-        :param context:
-        :param txn_id:
+        Initialize the task to *pending* state
         :return:
         """
-        if not context.sys_recorder:
-            return
-        context.sys_recorder.commit_record(txn_id)
-        context.end_task(self, txn_id, True)
+        self._flow_id = flow_id
+        self._flow = flow
 
-    def _rollback(self, context, txn_id, err):
-        """
-        rollback the checkpoint transaction if execution failed
-        :param context:
-        :param txn_id:
-        :param err:
-        :return:
-        """
-        if not context.sys_recorder:
-            return
-        context.sys_recorder.rollback_record(txn_id, err)
-        context.end_task(self, txn_id, False)
+        self._state = self.STATE_PENDING
+        self.on_pending(context)
+        self._exec_id = context.on_task_pending(self.name, self.attributes, flow_id, flow)
+
+    def on_pending(self, context):
+        pass
+
+    def cancel(self, context, fail_deps):
+        self._state = self.STATE_CANCELLED
+        self.on_cancel(context)
+        context.on_task_cancelled(self, fail_deps)
+
+    def on_cancel(self, context):
+        pass
+
 
     def execute(self, context, **kwargs):
         """
@@ -174,33 +141,30 @@ class Task(object):
         :return:
         """
 
-        txn_id = self._start(context, **kwargs)
+        new_state = self.on_start(context, **kwargs)
+        self._state = new_state
 
         try:
             # run if
             # 1. task record is inited. or
             # 2. checkpoint connection is not specified
-            if txn_id or not context.sys_recorder:
+            if self._state == self.STATE_EXECUTING:
+                context.on_task_start(self)
                 self._result = self.execute_internal(context, **kwargs)
-                self.on_commit(context, exec_id=txn_id)
+                self._state = self.STATE_SUCCESS
+                self.on_commit(context)
 
+            assert self._state == self.STATE_SUCCESS
             self._result_code = self.RET_CODE_SUCCESS
-
-            if context.sys_recorder and txn_id:
-                self._commit(context, txn_id)
-
-            if self.notify_success and context.get_notifier() is not None:
-                context.get_notifier().notify_success(self.name)
+            context.on_task_success(self)
 
         except Exception as e:
             logger.exception(str(e))
-            self.on_rollback(context, exec_id=txn_id)
+            self._state = self.STATE_FAILED
             self._result_code = self.RET_CODE_FAIL
-            if self.notify_fail and context.get_notifier() is not None:
-                context.get_notifier().notify_error(self.name, str(e))
-
-            if context.sys_recorder and txn_id:
-                self._rollback(context, txn_id, e)
+            self._result = e
+            self.on_rollback(context)
+            context.on_task_failed(self, e)
 
     def on_commit(self, context, **kwargs):
         pass
@@ -230,6 +194,60 @@ class Task(object):
 
 
 class ETLTask(Task):
+    DEFAULT_CHECKPOINT = '1970-01-01 00:00:00'
+
+    ATTR_LAST_CHECKPOINT = 'LAST_CHECKPOINT'
+    ATTR_CHECKPOINT = 'CHECKPOINT'
+
+    def __init__(self):
+        Task.__init__(self)
+
+        self.set_attribute(self.ATTR_LAST_CHECKPOINT, self.DEFAULT_CHECKPOINT)
+        now_ts = int(time.time())
+        init_ts = datetime_str_to_timestamp(self.DEFAULT_CHECKPOINT, tz=self.checkpoint_timezone)
+        checkpoint_ts = now_ts - (now_ts - init_ts) % self.checkpoint_round
+        self.set_attribute(self.ATTR_CHECKPOINT, timestamp_to_datetime(checkpoint_ts).strftime('%Y-%m-%d %H:%M:%S'))
+
+    def on_pending(self, context):
+        Task.on_pending(self, context)
+
+        # 基于当前时间,进行粒度对齐后计算本次执行的checkpoint
+        now_ts = int(time.time())
+        init_ts = datetime_str_to_timestamp(self.DEFAULT_CHECKPOINT, tz=self.checkpoint_timezone)
+        checkpoint_ts = now_ts - (now_ts - init_ts) % self.checkpoint_round
+        self.set_attribute(self.ATTR_CHECKPOINT, timestamp_to_datetime(checkpoint_ts).strftime('%Y-%m-%d %H:%M:%S'))
+
+        last_record = context.sys_recorder.last_success_record(self.name)
+        if last_record:
+            last_attrs = json.loads(last_record['attributes'])
+            self.set_attribute(self.ATTR_LAST_CHECKPOINT, last_attrs[self.ATTR_CHECKPOINT])
+
+    @property
+    def _last_checkpoint(self):
+        return self._attributes.get(self.ATTR_LAST_CHECKPOINT)
+
+    @property
+    def _checkpoint(self):
+        return self._attributes.get(self.ATTR_CHECKPOINT)
+
+    @property
+    def checkpoint_round(self):
+        """
+        the time interval the checkpoint will align to
+        default value is 1 day
+        :return:
+        """
+        return 3600 * 24
+
+    @property
+    def checkpoint_timezone(self):
+        """
+        the timezone used when recording checkpoint
+        default: None, use the local timezone
+        :return:
+        """
+        return None
+
     @property
     def target_conn(self):
         """
@@ -297,6 +315,17 @@ class ETLTask(Task):
         :return:
         """
         raise NotImplementedError
+
+    def on_start(self, context, **kwargs):
+        force = kwargs.get('force', False)
+
+        if self._checkpoint > self._last_checkpoint or force:
+            return self.STATE_EXECUTING
+        # 重复执行就直接跳过
+        logger.warn('last checkpoint {} indicates the task {} is already executed, bypass the execution'.format(
+            self._last_checkpoint, self.name))
+
+        return self.STATE_SUCCESS
 
     def on_commit(self, context, **kwargs):
         target_df = self._result
@@ -475,3 +504,10 @@ class Flow(object):
             for child in children:
                 self.dump(child, prefix + ("    " if tail else "│   "), False, False)
             self.dump(last_child, prefix + ("    " if tail else "│   "), True, False)
+
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'tasks': self.tasks,
+            'deps': dict([(t, list(d)) for (t, d) in self.deps.items()])
+        }
