@@ -38,9 +38,14 @@ class ExecDetailAPI(ParadeResource):
         exec_tasks = self.context.sys_recorder.load_flow_tasks(id)
         flow = self.context.get_flowstore().load(executing_flow['flow']).uniform()
 
-        return {
-            'flow': flow.to_dict()
+        result = {
+            'flow': flow.to_dict(),
+            'exec': {
+                'flow': executing_flow,
+                'tasks': exec_tasks
+            }
         }
+        return result
 
 
 api.add_resource(ExecAPI, '/api/exec')

@@ -138,7 +138,11 @@ class ParadeRecorder(object):
         exec_flow = _conn.execute(_query).fetchone()
 
         if exec_flow is not None:
-            return dict(exec_flow)
+            raw = dict(exec_flow)
+            raw['create_time'] = str(raw['create_time'])
+            raw['update_time'] = str(raw['update_time'])
+            raw['commit_time'] = str(raw['commit_time'])
+            return raw
         return None
 
     def load_flows(self, executing=None, page_size=0, page_no=1):
@@ -157,4 +161,10 @@ class ParadeRecorder(object):
         if page_size > 0:
             query = query.limit(page_size).offset((page_no - 1) * page_size)
         df = self.conn.load_query(str(query.compile(compile_kwargs={"literal_binds": True})))
-        return json.loads(df.to_json(orient='records'))
+        tasks = json.loads(df.to_json(orient='records'))
+        # for t in tasks:
+        #     t['create_time'] = str(t['create_time'])
+        #     t['start_time'] = str(t['start_time'])
+        #     t['commit_time'] = str(t['commit_time'])
+        #     t['update_time'] = str(t['update_time'])
+        return tasks
