@@ -14,6 +14,17 @@ def _create_app(context):
     from ..api import parade_blueprint
     app.register_blueprint(parade_blueprint)
     socketio = SocketIO(app, async_mode='threading')
+    sio = socketio.server
+
+    @sio.on('connect', namespace='/exec')
+    def connect(sid, environ):
+        pass
+
+    @sio.on('query', namespace='/exec')
+    def query(sid, data):
+        exec_id = data
+        sio.enter_room(sid, exec_id)
+        sio.emit('reply', 'answer', namespace='/exec')
 
     context.webapp = app
 

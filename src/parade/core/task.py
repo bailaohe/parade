@@ -132,7 +132,6 @@ class Task(object):
     def on_cancel(self, context):
         pass
 
-
     def execute(self, context, **kwargs):
         """
         the execution process of the etl task
