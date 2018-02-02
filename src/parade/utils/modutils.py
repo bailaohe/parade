@@ -34,7 +34,7 @@ def walk_modules(path):
     returns them. If *any* module throws an exception while importing, that
     exception is thrown back.
 
-    For example: walk_modules('scrapy.utils')
+    For demo: walk_modules('scrapy.utils')
     """
 
     mods = []

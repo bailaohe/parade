@@ -191,7 +191,7 @@ class Context(object):
                 'flow-id': task.flow_id,
                 'task': task.name,
                 'task-id': task.exec_id,
-                'event': 'task-start'
+                'event': 'task-started'
             }, namespace='/exec', room=str(task.flow_id))
 
     def on_task_success(self, task):
@@ -203,7 +203,7 @@ class Context(object):
                 'flow-id': task.flow_id,
                 'task': task.name,
                 'task-id': task.exec_id,
-                'event': 'task-success'
+                'event': 'task-succeeded'
             }, namespace='/exec', room=str(task.flow_id))
 
         if task.notify_success and self.get_notifier() is not None:
