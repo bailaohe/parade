@@ -171,51 +171,51 @@ class Context(object):
         return self.sys_recorder.create_task_record(task, checkpoint, flow_id, flow)
 
     def on_task_cancelled(self, task, failed_deps):
-        self.sys_recorder.mark_task_cancelled(task._exec_id, failed_deps)
+        self.sys_recorder.mark_task_cancelled(task.exec_id, failed_deps)
 
         if hasattr(self, 'webapp'):
             socketio = self.webapp.extensions['socketio']
             socketio.emit('update', {
                 'task': task.name,
-                'task-id': task._exec_id,
+                'task-id': task.exec_id,
                 'event': 'task-cancelled'
-            }, namespace='/exec', room=str(task._flow_id))
+            }, namespace='/exec', room=str(task.flow_id))
 
     def on_task_start(self, task):
-        self.sys_recorder.mark_task_start(task._exec_id)
+        self.sys_recorder.mark_task_start(task.exec_id)
 
         if hasattr(self, 'webapp'):
             socketio = self.webapp.extensions['socketio']
             socketio.emit('update', {
                 'task': task.name,
-                'task-id': task._exec_id,
+                'task-id': task.exec_id,
                 'event': 'task-start'
-            }, namespace='/exec', room=str(task._flow_id))
+            }, namespace='/exec', room=str(task.flow_id))
 
     def on_task_success(self, task):
-        self.sys_recorder.mark_task_success(task._exec_id)
+        self.sys_recorder.mark_task_success(task.exec_id)
 
         if hasattr(self, 'webapp'):
             socketio = self.webapp.extensions['socketio']
             socketio.emit('update', {
                 'task': task.name,
-                'task-id': task._exec_id,
+                'task-id': task.exec_id,
                 'event': 'task-success'
-            }, namespace='/exec', room=str(task._flow_id))
+            }, namespace='/exec', room=str(task.flow_id))
 
         if task.notify_success and self.get_notifier() is not None:
             self.get_notifier().notify_success(self.name)
 
     def on_task_failed(self, task, err):
-        self.sys_recorder.mark_task_failed(task._exec_id, err)
+        self.sys_recorder.mark_task_failed(task.exec_id, err)
 
         if hasattr(self, 'webapp'):
             socketio = self.webapp.extensions['socketio']
             socketio.emit('update', {
                 'task': task.name,
-                'task-id': task._exec_id,
+                'task-id': task.exec_id,
                 'event': 'task-failed'
-            }, namespace='/exec', room=str(task._flow_id))
+            }, namespace='/exec', room=str(task.flow_id))
 
         if task.notify_fail and self.get_notifier() is not None:
             self.get_notifier().notify_error(self.name, str(err))

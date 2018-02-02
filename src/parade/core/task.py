@@ -32,9 +32,9 @@ class Task(object):
         self._result = None
         self._attributes = {}
         self._result_code = self.RET_CODE_SUCCESS
-        self._exec_id = 0
+        self.exec_id = 0
         self._state = self.STATE_INIT
-        self._flow_id = 0
+        self.flow_id = 0
         self._flow = None
 
     @property
@@ -114,12 +114,12 @@ class Task(object):
         Initialize the task to *pending* state
         :return:
         """
-        self._flow_id = flow_id
+        self.flow_id = flow_id
         self._flow = flow
 
         self._state = self.STATE_PENDING
         self.on_pending(context)
-        self._exec_id = context.on_task_pending(self.name, self.attributes, flow_id, flow)
+        self.exec_id = context.on_task_pending(self.name, self.attributes, flow_id, flow)
 
     def on_pending(self, context):
         pass
