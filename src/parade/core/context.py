@@ -175,30 +175,33 @@ class Context(object):
 
         if hasattr(self, 'webapp'):
             socketio = self.webapp.extensions['socketio']
-            socketio.emit('task-cancelled', {
+            socketio.emit('update', {
                 'task': task.name,
-                'task-id': task._exec_id
-            }, namespace='/exec-' + str(task._flow_id))
+                'task-id': task._exec_id,
+                'event': 'task-cancelled'
+            }, namespace='/exec', room=str(task._flow_id))
 
     def on_task_start(self, task):
         self.sys_recorder.mark_task_start(task._exec_id)
 
         if hasattr(self, 'webapp'):
             socketio = self.webapp.extensions['socketio']
-            socketio.emit('task-start', {
+            socketio.emit('update', {
                 'task': task.name,
-                'task-id': task._exec_id
-            }, namespace='/exec-' + str(task._flow_id))
+                'task-id': task._exec_id,
+                'event': 'task-start'
+            }, namespace='/exec', room=str(task._flow_id))
 
     def on_task_success(self, task):
         self.sys_recorder.mark_task_success(task._exec_id)
 
         if hasattr(self, 'webapp'):
             socketio = self.webapp.extensions['socketio']
-            socketio.emit('task-success', {
+            socketio.emit('update', {
                 'task': task.name,
-                'task-id': task._exec_id
-            }, namespace='/exec-' + str(task._flow_id))
+                'task-id': task._exec_id,
+                'event': 'task-success'
+            }, namespace='/exec', room=str(task._flow_id))
 
         if task.notify_success and self.get_notifier() is not None:
             self.get_notifier().notify_success(self.name)
@@ -208,10 +211,11 @@ class Context(object):
 
         if hasattr(self, 'webapp'):
             socketio = self.webapp.extensions['socketio']
-            socketio.emit('task-failed', {
+            socketio.emit('update', {
                 'task': task.name,
-                'task-id': task._exec_id
-            }, namespace='/exec-' + str(task._flow_id))
+                'task-id': task._exec_id,
+                'event': 'task-failed'
+            }, namespace='/exec', room=str(task._flow_id))
 
         if task.notify_fail and self.get_notifier() is not None:
             self.get_notifier().notify_error(self.name, str(err))

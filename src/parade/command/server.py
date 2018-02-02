@@ -23,8 +23,8 @@ def _create_app(context):
     @sio.on('query', namespace='/exec')
     def query(sid, data):
         exec_id = data
-        sio.enter_room(sid, exec_id)
-        sio.emit('reply', 'answer', namespace='/exec')
+        sio.enter_room(sid, str(exec_id), namespace='/exec')
+        sio.emit('reply', exec_id, namespace='/exec')
 
     context.webapp = app
 
