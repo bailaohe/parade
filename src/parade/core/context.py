@@ -176,6 +176,7 @@ class Context(object):
         if hasattr(self, 'webapp'):
             socketio = self.webapp.extensions['socketio']
             socketio.emit('update', {
+                'flow-id': task.flow_id,
                 'task': task.name,
                 'task-id': task.exec_id,
                 'event': 'task-cancelled'
@@ -187,6 +188,7 @@ class Context(object):
         if hasattr(self, 'webapp'):
             socketio = self.webapp.extensions['socketio']
             socketio.emit('update', {
+                'flow-id': task.flow_id,
                 'task': task.name,
                 'task-id': task.exec_id,
                 'event': 'task-start'
@@ -198,6 +200,7 @@ class Context(object):
         if hasattr(self, 'webapp'):
             socketio = self.webapp.extensions['socketio']
             socketio.emit('update', {
+                'flow-id': task.flow_id,
                 'task': task.name,
                 'task-id': task.exec_id,
                 'event': 'task-success'
@@ -212,6 +215,7 @@ class Context(object):
         if hasattr(self, 'webapp'):
             socketio = self.webapp.extensions['socketio']
             socketio.emit('update', {
+                'flow-id': task.flow_id,
                 'task': task.name,
                 'task-id': task.exec_id,
                 'event': 'task-failed'
