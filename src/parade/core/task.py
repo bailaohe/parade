@@ -16,12 +16,12 @@ class Task(object):
     RET_CODE_SUCCESS = 0
     RET_CODE_FAIL = 1
 
-    STATE_INIT = 0
-    STATE_PENDING = 1
-    STATE_EXECUTING = 2
-    STATE_SUCCESS = 3
-    STATE_FAILED = 4
-    STATE_CANCELLED = 5
+    STATE_INIT = (0, 'Created')[0]
+    STATE_PENDING = (1, 'Pending')[0]
+    STATE_EXECUTING = (2, 'Executing')[0]
+    STATE_SUCCESS = (3, 'Succeeded')[0]
+    STATE_FAILED = (4, 'Failed')[0]
+    STATE_CANCELLED = (5, 'Cancelled')[0]
 
     def __init__(self):
         """
@@ -457,6 +457,11 @@ class Milestone(Task):
 
 
 class Flow(object):
+
+    STATE_EXECUTING = (2, 'Executing')[0]
+    STATE_SUCCESS = (3, 'Succeeded')[0]
+    STATE_FAILED = (4, 'Failed')[0]
+
     def __init__(self, name, tasks, deps=None):
         self.name = name
         self.tasks = tasks

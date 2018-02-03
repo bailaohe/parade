@@ -1,3 +1,4 @@
+from flask import request
 from flask_restful import Api, reqparse
 
 from . import parade_blueprint, ParadeResource, catch_parade_error
@@ -26,10 +27,13 @@ class ExecAPI(ParadeResource):
 
     @catch_parade_error
     def get(self):
-        parser.add_argument('executing', type=bool)
-        args = parser.parse_args()
-        executing = args.get('executing', None)
-        return self.context.sys_recorder.load_flows(executing)
+        # parser.add_argument('executing', type=bool)
+        # args = parser.parse_args()
+        executing = request.args.get('executing', type=bool, default=None)
+        flow = request.args.get('flow', default=None)
+        page_size = request.args.get('pageSize', type=int, default=0)
+        page_no = request.args.get('pageNo', type=int, default=1)
+        return self.context.sys_recorder.load_flows(flow=flow, executing=executing, page_size=page_size, page_no=page_no)
 
 
 class ExecDetailAPI(ParadeResource):

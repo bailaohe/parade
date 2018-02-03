@@ -115,6 +115,7 @@ class ParadeFlowRunner(FlowRunner):
 
                 elif len(fail_deps) > 0:
                     logger.info("task [{}] canceled since its dependencies [{}] failed".format(next_task_name, fail_deps))
+                    executing.add(next_task_name)
                     failed.add(next_task_name)
                     next_task.cancel(self.context, fail_deps)
                 else:

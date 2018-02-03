@@ -1,8 +1,8 @@
 import json
 
-from sqlalchemy import MetaData, Column, types, Index, Table
+from sqlalchemy import MetaData, Column, types, Index, Table, select
 import datetime
-from sqlalchemy.sql import functions
+from sqlalchemy.sql import functions, Select
 
 from ..core.task import Task
 from ..connection.rdb import RDBConnection
@@ -145,16 +145,27 @@ class ParadeRecorder(object):
             return raw
         return None
 
-    def load_flows(self, executing=None, page_size=0, page_no=1):
+    def load_flows(self, flow=None, executing=None, page_size=0, page_no=1):
+        from sqlalchemy import func
         query = self._flow_table.select()
+        if flow is not None:
+            query = query.where(self._flow_table.c.flow == flow)
         if executing is not None:
             query = query.where(
-                self._flow_table.c.status == 0) if executing else self._flow_table.select().where(
+                self._flow_table.c.status == 0) if executing else query.where(
                 self._flow_table.c.status > 0)
+
+        total = None
         if page_size > 0:
+            count_query = query.with_only_columns([func.count(self._flow_table.c.id)])
             query = query.limit(page_size).offset((page_no - 1) * page_size)
+            total = self.conn.open().execute(count_query).scalar()
+
+        query = query.order_by(self._flow_table.c.create_time.desc())
         df = self.conn.load_query(str(query.compile(compile_kwargs={"literal_binds": True})))
-        return json.loads(df.to_json(orient='records'))
+        if not total:
+            total = len(df)
+        return {'data': json.loads(df.to_json(orient='records')), 'total': total}
 
     def load_flow_tasks(self, flow_id, page_size=0, page_no=1):
         query = self._task_table.select().where(self._task_table.c.flow_id == flow_id)
