@@ -1,10 +1,9 @@
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
-from ..error.task_errors import TaskNotFoundError
 from ..core.task import Flow
-from ..utils.log import logger
 from ..error.flow_errors import FlowNotFoundError
+from ..utils.log import parade_logger as logger
 
 
 class Engine(object):

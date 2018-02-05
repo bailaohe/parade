@@ -1,5 +1,5 @@
 from . import Notifier
-from ..utils.log import logger
+from ..utils.log import parade_logger as logger
 
 
 class ParadeNotifier(Notifier):

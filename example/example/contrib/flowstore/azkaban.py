@@ -4,7 +4,7 @@ import os
 from bs4 import BeautifulSoup
 import requests
 from parade.flowstore import FlowStore
-from parade.utils.log import logger
+from parade.utils.log import parade_logger as logger
 from parade.core.task import Task, Flow
 
 

@@ -1,7 +1,7 @@
 import sys
 import pandas as pd
 from ..core.task import Task
-from ..utils.log import logger
+from ..utils.log import parade_logger as logger
 
 from . import ParadeCommand
 

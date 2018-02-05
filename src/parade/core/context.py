@@ -8,7 +8,7 @@ from ..core.task import Task
 from ..flowstore import FlowStore
 from ..notify import Notifier
 from ..utils.modutils import get_class, iter_classes
-from ..utils.log import logger
+from ..utils.log import parade_logger as logger
 
 
 class Context(object):

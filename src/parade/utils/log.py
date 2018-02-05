@@ -1,30 +1,42 @@
+import os
 import logging
+from logging.config import dictConfig
 
-_formatter = logging.Formatter(
-        # '%(asctime)s parade %(levelname)s [%(process)d] [%(filename)s:%(lineno)s]: %(message)s')
-        '%(asctime)s parade %(levelname)s [%(process)d]: %(message)s')
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
+logging.getLogger('socketio').setLevel(logging.ERROR)
+logging.getLogger('engineio').setLevel(logging.ERROR)
 
-_handler = None
-
+_parade_formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
 _console_handler = logging.StreamHandler()
-_console_handler.setFormatter(_formatter)
-
-logger = logging.getLogger()
-logger.addHandler(_console_handler)
-logger.setLevel(logging.INFO)
+_console_handler.setFormatter(_parade_formatter)
 
 
-def setup_logging(log_path):
-    global _handler
-    global logger
-    if _handler:
-        logger.removeHandler(_handler)
-
-    logger.debug("Logging path set to {}".format(log_path))
-    _handler = logging.handlers.TimedRotatingFileHandler(log_path)
-    _handler.setFormatter(_formatter)
-
-    logger = logging.getLogger()
-    logger.addHandler(_handler)
+def _reset_logger(logger):
     logger.setLevel(logging.DEBUG)
+    logger.handlers = [_console_handler]
 
+
+parade_logger = logging.getLogger('Parade')
+_reset_logger(parade_logger)
+
+def logger(exec=None, flow=None, task=None):
+    if not exec:
+        _reset_logger(parade_logger)
+        return parade_logger
+
+    if task:
+        parade_exec_logger = logging.getLogger('Parade.Task[{}/{}]'.format(flow, task))
+        _reset_logger(parade_exec_logger)
+        log_dir = os.path.join('executing', str(exec), 'tasks')
+        os.makedirs(log_dir, exist_ok=True)
+        handler = logging.FileHandler(os.path.join(log_dir, task))
+    else:
+        parade_exec_logger = logging.getLogger('Parade.Flow[{}]'.format(flow))
+        _reset_logger(parade_exec_logger)
+        log_dir = os.path.join('executing', str(exec))
+        os.makedirs(log_dir, exist_ok=True)
+        handler = logging.FileHandler(os.path.join(log_dir, flow))
+
+    handler.setFormatter(_parade_formatter)
+    parade_exec_logger.addHandler(handler)
+    return parade_exec_logger

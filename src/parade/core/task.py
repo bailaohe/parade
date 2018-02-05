@@ -158,7 +158,7 @@ class Task(object):
             context.on_task_success(self)
 
         except Exception as e:
-            logger.exception(str(e))
+            logger(exec=self.flow_id, flow=self._flow, task=self.name).exception(str(e))
             self._state = self.STATE_FAILED
             self._result_code = self.RET_CODE_FAIL
             self._result = e
@@ -321,7 +321,7 @@ class ETLTask(Task):
         if self._checkpoint > self._last_checkpoint or force:
             return self.STATE_EXECUTING
         # 重复执行就直接跳过
-        logger.warn('last checkpoint {} indicates the task {} is already executed, bypass the execution'.format(
+        logger(exec=self.flow_id, flow=self._flow, task=self.name).warn('last checkpoint {} indicates the task {} is already executed, bypass the execution'.format(
             self._last_checkpoint, self.name))
 
         return self.STATE_SUCCESS

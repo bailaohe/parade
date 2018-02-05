@@ -3,7 +3,7 @@ import pandas as pd
 from sqlalchemy import create_engine, MetaData, Column, Table
 from sqlalchemy.exc import NoSuchTableError
 
-from parade.utils.log import logger
+from parade.utils.log import parade_logger as logger
 from . import Connection
 
 

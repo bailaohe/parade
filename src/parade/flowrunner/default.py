@@ -2,7 +2,6 @@ import asyncio
 from asyncio import queues
 
 from ..core.task import Flow, Task
-from ..error.task_errors import TaskNotFoundError
 from ..flowrunner import FlowRunner
 from ..utils.log import logger
 
@@ -84,10 +83,10 @@ class ParadeFlowRunner(FlowRunner):
             """
             next_task_name = self.exec_queue.get_nowait()
 
-            logger.info("pick up task [{}] ...".format(next_task_name))
+            logger(exec=self.executing_flow_id, flow=self.executing_flow.name).info("pick up task [{}] ...".format(next_task_name))
             try:
                 if next_task_name in executing:
-                    logger.info("task [{}] is executing, pass ...".format(next_task_name))
+                    logger(exec=self.executing_flow_id, flow=self.executing_flow.name).info("task [{}] is executing, pass ...".format(next_task_name))
                     return
 
                 next_task = self.context.get_task(next_task_name)
@@ -100,21 +99,21 @@ class ParadeFlowRunner(FlowRunner):
                     # all dependencies are done
                     # submit the task to threading pool to execute
                     if len(task_deps) > 0:
-                        logger.info("all dependant task(s) of task {} is done".format(next_task_name))
+                        logger(exec=self.executing_flow_id, flow=self.executing_flow.name).info("all dependant task(s) of task {} is done".format(next_task_name))
                     executing.add(next_task_name)
 
-                    logger.info("task [{}] start executing ...".format(next_task_name))
+                    logger(exec=self.executing_flow_id, flow=self.executing_flow.name).info("task [{}] start executing ...".format(next_task_name))
                     next_task.execute(self.context, flow_id=self.executing_flow_id, flow=self.executing_flow,
                                       **self.kwargs)
                     if next_task.result_code == Task.RET_CODE_SUCCESS:
-                        logger.info("task [{}] executed successfully".format(next_task_name))
+                        logger(exec=self.executing_flow_id, flow=self.executing_flow.name).info("task [{}] executed successfully".format(next_task_name))
                         successed.add(next_task_name)
                     else:
-                        logger.info("task [{}] executed failed".format(next_task_name))
+                        logger(exec=self.executing_flow_id, flow=self.executing_flow.name).info("task [{}] executed failed".format(next_task_name))
                         failed.add(next_task_name)
 
                 elif len(fail_deps) > 0:
-                    logger.info("task [{}] canceled since its dependencies [{}] failed".format(next_task_name, fail_deps))
+                    logger(exec=self.executing_flow_id, flow=self.executing_flow.name).info("task [{}] canceled since its dependencies [{}] failed".format(next_task_name, fail_deps))
                     executing.add(next_task_name)
                     failed.add(next_task_name)
                     next_task.cancel(self.context, fail_deps)
@@ -124,7 +123,7 @@ class ParadeFlowRunner(FlowRunner):
                     yield from self.exec_queue.put(next_task_name)
                     yield from asyncio.sleep(1)
             except Exception as e:
-                logger.exception(str(e))
+                logger(exec=self.executing_flow_id, flow=self.executing_flow.name).exception(str(e))
             finally:
                 self.exec_queue.task_done()
 
