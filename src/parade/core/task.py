@@ -490,6 +490,7 @@ class Flow(object):
 
     def uniform(self):
         if len(self.forest) > 1:
+            self.tasks.append(self.name)
             self.deps[self.name] = self.forest
         return self
 
