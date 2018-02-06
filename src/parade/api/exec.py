@@ -59,10 +59,13 @@ class JobLogAPI(ParadeResource):
     def get(self, exec_id, task):
         import os
         logfile = os.path.join('executing', exec_id, 'tasks', task)
-        with open(logfile, 'r') as f:
-            loglines = f.readlines()
 
-        return loglines
+        log_lines = []
+        if os.path.exists(logfile):
+            with open(logfile, 'r') as f:
+                log_lines = f.readlines()
+
+        return log_lines
 
 
 api.add_resource(ExecAPI, '/api/exec')

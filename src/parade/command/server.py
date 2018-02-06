@@ -1,4 +1,17 @@
+import os
 from . import ParadeCommand
+
+
+def _init_web():
+    from flask import Blueprint
+    web = Blueprint('web', __name__)
+
+    @web.route("/")
+    def route():
+        from flask import render_template
+        return render_template("index.html")
+
+    return web
 
 
 def _create_app(context):
@@ -6,13 +19,20 @@ def _create_app(context):
     from flask_cors import CORS
     from flask_socketio import SocketIO
 
-    app = Flask(context.name)
+    template_dir = os.path.join(context.workdir, 'web')
+    static_dir = os.path.join(context.workdir, 'web', 'static')
+
+    app = Flask(context.name, template_folder=template_dir, static_folder=static_dir)
     CORS(app)
 
     app.parade_context = context
 
     from ..api import parade_blueprint
     app.register_blueprint(parade_blueprint)
+
+    web_blueprint = _init_web()
+    app.register_blueprint(web_blueprint)
+
     socketio = SocketIO(app, async_mode='threading')
     sio = socketio.server
 
