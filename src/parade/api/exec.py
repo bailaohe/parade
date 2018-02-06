@@ -33,7 +33,8 @@ class ExecAPI(ParadeResource):
         flow = request.args.get('flow', default=None)
         page_size = request.args.get('pageSize', type=int, default=0)
         page_no = request.args.get('pageNo', type=int, default=1)
-        return self.context.sys_recorder.load_flows(flow=flow, executing=executing, page_size=page_size, page_no=page_no)
+        return self.context.sys_recorder.load_flows(flow=flow, executing=executing, page_size=page_size,
+                                                    page_no=page_no)
 
 
 class ExecDetailAPI(ParadeResource):
@@ -53,5 +54,17 @@ class ExecDetailAPI(ParadeResource):
         return result
 
 
+class JobLogAPI(ParadeResource):
+    @catch_parade_error
+    def get(self, exec_id, task):
+        import os
+        logfile = os.path.join('executing', exec_id, 'tasks', task)
+        with open(logfile, 'r') as f:
+            loglines = f.readlines()
+
+        return loglines
+
+
 api.add_resource(ExecAPI, '/api/exec')
 api.add_resource(ExecDetailAPI, '/api/exec/<id>')
+api.add_resource(JobLogAPI, '/api/exec/<exec_id>/<task>')
