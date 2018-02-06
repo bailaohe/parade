@@ -1,6 +1,5 @@
-import os
 import logging
-from logging.config import dictConfig
+import os
 
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 logging.getLogger('socketio').setLevel(logging.ERROR)
@@ -18,6 +17,7 @@ def _reset_logger(logger):
 
 parade_logger = logging.getLogger('Parade')
 _reset_logger(parade_logger)
+
 
 def logger(exec=None, flow=None, task=None):
     if not exec:
