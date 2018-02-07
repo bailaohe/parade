@@ -163,6 +163,11 @@ class ParadeRecorder(object):
 
         query = query.order_by(self._flow_table.c.create_time.desc())
         df = self.conn.load_query(str(query.compile(compile_kwargs={"literal_binds": True})))
+
+        df['create_time'] = df['create_time'].apply(lambda ts: str(ts))
+        df['commit_time'] = df['commit_time'].apply(lambda ts: str(ts))
+        df['update_time'] = df['update_time'].apply(lambda ts: str(ts))
+
         if not total:
             total = len(df)
         return {'data': json.loads(df.to_json(orient='records')), 'total': total}
@@ -172,5 +177,11 @@ class ParadeRecorder(object):
         if page_size > 0:
             query = query.limit(page_size).offset((page_no - 1) * page_size)
         df = self.conn.load_query(str(query.compile(compile_kwargs={"literal_binds": True})))
+
+        df['start_time'] = df['start_time'].apply(lambda ts: str(ts))
+        df['create_time'] = df['create_time'].apply(lambda ts: str(ts))
+        df['commit_time'] = df['commit_time'].apply(lambda ts: str(ts))
+        df['update_time'] = df['update_time'].apply(lambda ts: str(ts))
+
         tasks = json.loads(df.to_json(orient='records'))
         return tasks
