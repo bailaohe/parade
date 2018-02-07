@@ -27,6 +27,7 @@ RUN apk add --no-cache --virtual .build-deps  \
 	&& apk add --no-cache mariadb-dev \
 	&& apk add --no-cache subversion \
 	&& apk del .build-deps \
+	&& pip install --upgrade pip \
 	&& pip --no-cache-dir install parade==0.1.20.1
     #RUN pip3 --no-cache-dir install beautifulsoup4
 
