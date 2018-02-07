@@ -1,17 +1,39 @@
-FROM bailaohe/statoy:flask
+FROM python:3-alpine
 MAINTAINER He Bai <bai.he@outlook.com>
 
-RUN pip3 --no-cache-dir install parade==0.1.21
-RUN pip3 --no-cache-dir install redis
-RUN pip3 --no-cache-dir install beautifulsoup4
-RUN pip3 --no-cache-dir install PyGithub
-RUN pip3 --no-cache-dir install pymongo
-RUN pip3 --no-cache-dir instlal flask_socketio
+RUN apk add --no-cache --virtual .build-deps  \
+		bzip2-dev \
+		coreutils \
+		dpkg-dev dpkg \
+		expat-dev \
+		gcc \
+		gdbm-dev \
+		libc-dev \
+		libffi-dev \
+		linux-headers \
+		make \
+		ncurses-dev \
+		openssl \
+		openssl-dev \
+		pax-utils \
+		readline-dev \
+		sqlite-dev \
+		tcl-dev \
+		tk \
+		tk-dev \
+		xz-dev \
+		zlib-dev \
+    &&apk add --no-cache postgresql-dev \
+	&& apk add --no-cache mariadb-dev \
+	&& apk del .build-deps \
+	&& pip --no-cache-dir install parade==0.1.20.1
+    #RUN pip3 --no-cache-dir install beautifulsoup4
 
 EXPOSE 5000
 
 VOLUME /workspace
-
 WORKDIR /workspace
 
-CMD parade server
+ENTRYPOINT parade
+
+CMD server
