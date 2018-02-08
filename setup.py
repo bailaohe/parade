@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='parade',
-    version='0.1.20.2',
+    version='0.1.20.3',
     description='A ETL engine for pandas-based data task',
     author='He Bai',
     author_email='bailaohe@gmail.com',
@@ -16,7 +16,7 @@ setup(
     #package_data={'': ['*.json', '*.xml', '*.yml', '*.tpl']},
     install_requires=['pandas', 'sqlalchemy', 'requests', 'pyyaml', 'flask',
                       'flask_cors', 'flask_restful', 'psycopg2', 'mysqlclient', 'xlsxwriter',
-                      'PyGithub', 'pymongo', 'Flask-SocketIO', 'redis', 'jupyter'],
+                      'PyGithub', 'pymongo', 'Flask-SocketIO', 'redis', 'jupyter', 'nbformat'],
     entry_points={
         'console_scripts': [
             'parade = parade.cmdline:execute',
