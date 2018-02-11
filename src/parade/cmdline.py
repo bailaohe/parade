@@ -14,7 +14,9 @@ def _get_commands(in_workspace):
     for cmd in iter_classes(ParadeCommand, 'parade.command', class_filter=lambda cls: cls != ParadeCommand):
         if in_workspace or not cmd.requires_workspace:
             cmd_name = cmd.__module__.split('.')[-1]
-            d[cmd_name] = cmd()
+            cmd_group = None if len(cmd.__module__) == len('parade.command') + 1 + len(cmd_name) else cmd.__module__[len('parade.command') + 1:-len(cmd_name)-1]
+            cmd_path = cmd_name if not cmd_group else cmd_group + '.' + cmd_name
+            d[cmd_path] = (cmd(), cmd_name, cmd_group)
     return d
 
 
@@ -29,18 +31,32 @@ def execute():
     # load the commands and parse arguments
     parser = argparse.ArgumentParser(description='The CLI of parade engine.')
     inworkspace = inside_workspace()
-    sub_parsers = parser.add_subparsers(dest='command')
+    cmd_parsers = parser.add_subparsers(dest='command')
     cmds = _get_commands(inworkspace)
-    for cmdname, cmd in cmds.items():
-        cmd_parser = sub_parsers.add_parser(cmdname, help=cmd.help())
-        cmd.config_parser(cmd_parser)
+
+    sub_cmd_parsers_dict = {}
+    for cmd, cmd_name, cmd_group in cmds.values():
+        if not cmd_group:
+            cmd_parser = cmd_parsers.add_parser(cmd_name, help=cmd.help())
+            cmd.config_parser(cmd_parser)
+        else:
+            if cmd_group in sub_cmd_parsers_dict:
+                sub_cmd_parsers = sub_cmd_parsers_dict[cmd_group]
+            else:
+                group_parser = cmd_parsers.add_parser(cmd_group, help=(cmd_group + '-related sub commands'))
+                sub_cmd_parsers = group_parser.add_subparsers(dest='subcommand')
+                sub_cmd_parsers_dict[cmd_group] = sub_cmd_parsers
+            sub_cmd_parser = sub_cmd_parsers.add_parser(cmd_name, help=cmd.help())
+            cmd.config_parser(sub_cmd_parser)
     args = parser.parse_args()
 
     if not args.command:
         parser.print_usage()
         return 0
 
-    command = cmds[args.command]
+    cmd_path = args.command if not args.subcommand else args.command + '.' + args.subcommand
+
+    command = cmds[cmd_path][0]
     command_args = args.__dict__
 
     context = None

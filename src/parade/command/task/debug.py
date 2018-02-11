@@ -6,9 +6,9 @@ import nbformat
 import sys
 import six
 
-from ..core.task import ETLTask, SingleSourceETLTask
-from .notebook import NotebookCommand
-from . import ParadeCommand
+from parade.core.task import ETLTask, SingleSourceETLTask
+from parade.command.notebook import NotebookCommand
+from parade.command import ParadeCommand
 
 
 def get_function_body(func):

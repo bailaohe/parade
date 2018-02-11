@@ -1,4 +1,4 @@
-from . import ParadeCommand
+from .. import ParadeCommand
 
 
 class RemoveFlowCommand(ParadeCommand):

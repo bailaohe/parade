@@ -2,8 +2,8 @@ from os.path import join
 from shutil import copy
 
 import parade
-from . import ParadeCommand
-from ..utils.template import string_camelcase, render_templatefile
+from parade.command import ParadeCommand
+from parade.utils.template import string_camelcase, render_templatefile
 
 
 class GenTaskCommand(ParadeCommand):

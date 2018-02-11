@@ -1,6 +1,6 @@
 from github import Github
 
-from . import ParadeCommand
+from .. import ParadeCommand
 
 
 class SearchCommand(ParadeCommand):

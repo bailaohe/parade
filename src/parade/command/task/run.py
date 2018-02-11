@@ -1,5 +1,5 @@
-from . import ParadeCommand
-from ..core.engine import Engine
+from parade.command import ParadeCommand
+from parade.core.engine import Engine
 
 
 class ExecCommand(ParadeCommand):
@@ -20,7 +20,7 @@ class ExecCommand(ParadeCommand):
         return engine.execute_async(tasks=tasks, force=force, nodep=nodep)
 
     def short_desc(self):
-        return 'execute a flow or a set of tasks'
+        return 'execute a set of tasks'
 
     def config_parser(self, parser):
         parser.add_argument('--nodep', action="store_true", help='execute tasks without considering dependencies')

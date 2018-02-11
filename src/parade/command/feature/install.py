@@ -1,7 +1,7 @@
 import urllib
 from os.path import join
 
-from . import ParadeCommand
+from .. import ParadeCommand
 
 
 class InstallCommand(ParadeCommand):

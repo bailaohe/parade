@@ -1,4 +1,4 @@
-from . import ParadeCommand
+from parade.command import ParadeCommand
 
 
 class ListTaskCommand(ParadeCommand):
