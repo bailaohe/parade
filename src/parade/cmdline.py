@@ -54,7 +54,7 @@ def execute():
         parser.print_usage()
         return 0
 
-    cmd_path = args.command if not args.subcommand else args.command + '.' + args.subcommand
+    cmd_path = args.command if not hasattr(args, 'subcommand') else args.command + '.' + args.subcommand
 
     command = cmds[cmd_path][0]
     command_args = args.__dict__
