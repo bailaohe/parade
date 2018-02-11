@@ -37,22 +37,10 @@ class ParadeCommand(object):
         """
         raise NotImplementedError
 
-    def run(self, **kwargs):
+    def run(self, context, **kwargs):
         """
         Entry point for running commands
         """
-        context = None
-        if self.requires_workspace:
-            assert inside_workspace()
-            assert 'workspace' in kwargs
-            assert 'workdir' in kwargs
-            assert 'config' in kwargs
-
-            workspace = kwargs['workspace']
-            workdir = kwargs['workdir']
-            config = kwargs['config']
-            context = Context(workspace, config, workdir=workdir)
-
         return self.run_internal(context, **kwargs)
 
     def run_internal(self, context, **kwargs):

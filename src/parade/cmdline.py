@@ -4,6 +4,7 @@ import os
 
 from parade.command import ParadeCommand
 from parade.config import ConfigStore
+from parade.core.context import Context
 from parade.utils.modutils import iter_classes
 from parade.utils.workspace import inside_workspace, load_bootstrap
 
@@ -42,29 +43,12 @@ def execute():
     command = cmds[args.command]
     command_args = args.__dict__
 
+    context = None
     if inworkspace and command.requires_workspace:
         bootstrap = load_bootstrap()
-        workspace_settings = bootstrap['workspace']
-        config_settings = bootstrap['config']
+        context = Context(bootstrap)
 
-        config_driver = config_settings['driver']
-        config_uri = config_settings['uri']
-
-        config_repo = _get_config_repo(config_driver, config_uri, workspace_settings['path'])
-
-        config_name = config_settings['name']
-        config_profile = config_settings['profile']
-        config_version = config_settings['version']
-
-        # add this to enable switch profile via environment
-        config_profile = os.environ.get('PARADE_PROFILE', config_profile)
-
-        config = config_repo.load(app_name=config_name, profile=config_profile, version=config_version)
-
-        command_args.update(workspace=workspace_settings['name'], workdir=workspace_settings['path'])
-        command_args.update(config=config)
-
-    return command.run(**command_args)
+    return command.run(context, **command_args)
 
 
 if __name__ == '__main__':

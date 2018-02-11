@@ -1,14 +1,15 @@
 from collections import defaultdict
 
-from ..error.task_errors import DuplicatedTaskExistError, TaskNotFoundError
 from .recorder import ParadeRecorder
-from ..flowrunner import FlowRunner
+from ..config import ConfigStore, ConfigEntry
 from ..connection import Connection
 from ..core.task import Task
+from ..error.task_errors import DuplicatedTaskExistError
+from ..flowrunner import FlowRunner
 from ..flowstore import FlowStore
 from ..notify import Notifier
-from ..utils.modutils import get_class, iter_classes
 from ..utils.log import parade_logger as logger
+from ..utils.modutils import get_class, iter_classes
 
 
 class Context(object):
@@ -16,18 +17,25 @@ class Context(object):
     The executor context to support the ETL job executed by the engine
     """
 
-    def __init__(self, name, conf, workdir=None, master=None, **kwargs):
-        self.name = name
-        self.workdir = workdir
-        self.conf = conf
-        self.master = master
-        self.kwargs = kwargs
+    def __init__(self, bootstrap):
+        workspace_settings = bootstrap['workspace']
+
+        self.name = workspace_settings['name']
+        self.workdir = workspace_settings['path']
 
         self._task_dict = defaultdict(Task)
         self._conn_cache = defaultdict(Connection)
         self._notifier = None
         self._flowstore = None
         self._flowrunner = None
+        self._configstore = None
+
+        config_settings = bootstrap['config']
+        self.conf = ConfigEntry({'config': config_settings})
+
+        self._init_configstore()
+
+        self.conf = self._configstore.load()
 
     # ========================Context as a task store=========================
     # ========================================================================
@@ -119,6 +127,10 @@ class Context(object):
             self._flowrunner = self._load_plugin('flowrunner', FlowRunner)
 
         return self._flowrunner
+
+    def _init_configstore(self):
+        if not self._configstore:
+            self._configstore = self._load_plugin('config', ConfigStore)
 
     def _load_plugin(self, plugin_token, plugin_class, plugin_key=None, default_conf=None):
         conf = default_conf
