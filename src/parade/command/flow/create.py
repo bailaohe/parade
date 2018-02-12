@@ -7,6 +7,10 @@ class MakeFlowCommand(ParadeCommand):
 
     requires_workspace = True
 
+    @property
+    def aliases(self):
+        return ['new']
+
     def run_internal(self, context, **kwargs):
         assert isinstance(context, Context)
         deps = dict()

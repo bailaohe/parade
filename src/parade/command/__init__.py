@@ -11,6 +11,10 @@ class ParadeCommand(object):
     workspace_path = None
     config = None
 
+    @property
+    def aliases(self):
+        return []
+
     def short_desc(self):
         """
         A short description of the command

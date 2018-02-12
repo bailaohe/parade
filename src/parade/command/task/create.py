@@ -12,6 +12,10 @@ class GenTaskCommand(ParadeCommand):
     """
     requires_workspace = True
 
+    @property
+    def aliases(self):
+        return ['new']
+
     def short_desc(self):
         return 'generate a task skeleton with specified type'
 

@@ -5,6 +5,10 @@ class ListFlowCommand(ParadeCommand):
 
     requires_workspace = True
 
+    @property
+    def aliases(self):
+        return ['ls']
+
     def run_internal(self, context, **kwargs):
         flowstore = context.get_flowstore()
         flows = flowstore.list()

@@ -10,6 +10,10 @@ class ExecCommand(ParadeCommand):
     """
     requires_workspace = True
 
+    @property
+    def aliases(self):
+        return ['execute', 'exec']
+
     def run_internal(self, context, **kwargs):
         engine = Engine(context)
 

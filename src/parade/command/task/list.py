@@ -5,6 +5,10 @@ class ListTaskCommand(ParadeCommand):
 
     requires_workspace = True
 
+    @property
+    def aliases(self):
+        return ['ls']
+
     def run_internal(self, context, **kwargs):
         tasks = context.list_tasks()
         print('Workspace [{}] has {} task(s):'.format(context.name, len(tasks)))

@@ -4,6 +4,10 @@ from .. import ParadeCommand
 class RemoveFlowCommand(ParadeCommand):
     requires_workspace = True
 
+    @property
+    def aliases(self):
+        return ['remove', 'delete', 'del']
+
     def run_internal(self, context, **kwargs):
         flow = kwargs.get('flow')
         flowstore = context.get_flowstore()
