@@ -154,4 +154,3 @@ texinfo_documents = [
 ]
 
 html_show_sourcelink = False
-
