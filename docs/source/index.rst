@@ -26,8 +26,9 @@ This documentation contains everything you need to know about Parade.
 
    hello
 
-parade.core.context module
---------------------------
-.. automodule:: parade.core.context
-    :members:
-    :undoc-members:
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
