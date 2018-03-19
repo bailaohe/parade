@@ -26,6 +26,16 @@ This documentation contains everything you need to know about Parade.
 
    hello
 
+.. toctree::
+   :caption: Command line references
+
+   hello
+
+.. toctree::
+   :caption: Concepts & Architecture
+
+   hello
+
 Indices and tables
 ==================
 
