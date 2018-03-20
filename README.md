@@ -19,4 +19,4 @@ The quich way:
 
 ## Basic Usage & Tutorials
 
-See [here](https://github.com/bailaohe/parade/wiki/Tutorials) in wiki.
+See [here](http://parade.readthedocs.io/en/latest/).
