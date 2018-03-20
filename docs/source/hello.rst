@@ -1,4 +1,0 @@
-Parade: Hello
-=============
-
-Hello world

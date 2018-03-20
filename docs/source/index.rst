@@ -24,17 +24,19 @@ This documentation contains everything you need to know about Parade.
 .. toctree::
    :caption: First steps
 
-   hello
+   first/install
+
+   first/tutorial
 
 .. toctree::
    :caption: Command line references
 
-   hello
+   TODO
 
 .. toctree::
    :caption: Concepts & Architecture
 
-   hello
+   TODO
 
 Indices and tables
 ==================
