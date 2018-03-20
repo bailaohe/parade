@@ -331,12 +331,12 @@ recognize this attribute and build indexes after writing the result. The final t
 
    # -*- coding:utf-8 -*-
    
-   from parade.core.task import ETLTask
+   from parade.core.task import SingleSourceETLTask
    from parade.type import stdtypes
    import pandas as pd
    
    
-   class MovieData(ETLTask):
+   class MovieData(SingleSourceETLTask):
    
        @property
        def target_conn(self):
