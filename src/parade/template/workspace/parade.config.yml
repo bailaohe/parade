@@ -48,4 +48,5 @@ connection:
     output: dataframe
 flowstore:
   driver: default
-
+checkpoint:
+  connection: mysql-conn
