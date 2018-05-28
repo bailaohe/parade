@@ -1,5 +1,6 @@
 
 import pandas as pd
+from ..core import Plugin
 from sqlalchemy import create_engine, MetaData, Column, Table
 from sqlalchemy.exc import NoSuchTableError
 
@@ -8,20 +9,25 @@ from . import Connection
 
 
 class RDBConnection(Connection):
+    def __init__(self):
+        Plugin.__init__(self)
+        self._cached_conn = None
+
     def open(self):
-        uri = self.datasource.uri
-        if uri is None:
-            authen = None
-            uripart = self.datasource.host + ':' + str(self.datasource.port) + '/' + self.datasource.db
-            if self.datasource.user is not None:
-                authen = self.datasource.user
-            if authen is not None and self.datasource.password is not None:
-                authen += ':' + self.datasource.password
-            if authen is not None:
-                uripart = authen + '@' + uripart
-            uri = self.datasource.protocol + '://' + uripart + '?charset=utf8'
-        pandas_conn = create_engine(uri, encoding="utf-8")
-        return pandas_conn
+        if self._cached_conn is None:
+            uri = self.datasource.uri
+            if uri is None:
+                authen = None
+                uripart = self.datasource.host + ':' + str(self.datasource.port) + '/' + self.datasource.db
+                if self.datasource.user is not None:
+                    authen = self.datasource.user
+                if authen is not None and self.datasource.password is not None:
+                    authen += ':' + self.datasource.password
+                if authen is not None:
+                    uripart = authen + '@' + uripart
+                uri = self.datasource.protocol + '://' + uripart + '?charset=utf8'
+            self._cached_conn = create_engine(uri, encoding="utf-8")
+        return self._cached_conn
 
     def load(self, table, **kwargs):
         return self.load_query('select * from {}'.format(table))
