@@ -14,7 +14,8 @@ RUN apk add --no-cache --virtual .build-deps  \
 		linux-headers \
 		make \
 		ncurses-dev \
-		openssl-dev \
+		openssl \
+		libressl-dev \
 		pax-utils \
 		readline-dev \
 		sqlite-dev \
