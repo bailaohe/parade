@@ -14,7 +14,6 @@ RUN apk add --no-cache --virtual .build-deps  \
 		linux-headers \
 		make \
 		ncurses-dev \
-		openssl \
 		openssl-dev \
 		pax-utils \
 		readline-dev \
@@ -24,6 +23,7 @@ RUN apk add --no-cache --virtual .build-deps  \
 		tk-dev \
 		xz-dev \
 		zlib-dev \
+    && apk add --no-cache postgresql-dev \
 	&& apk add --no-cache mariadb-dev \
 	&& apk add --no-cache subversion \
 	&& pip install --upgrade pip \
@@ -31,7 +31,6 @@ RUN apk add --no-cache --virtual .build-deps  \
 	&& pip --no-cache-dir install parade==0.1.20.6 \
 	&& apk del .build-deps
     #RUN pip3 --no-cache-dir install beautifulsoup4
-    #&& apk add --no-cache postgresql-dev \
 
 EXPOSE 5000
 
