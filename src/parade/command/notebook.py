@@ -13,7 +13,7 @@ class NotebookCommand(ParadeCommand):
 
     def run_internal(self, context, **kwargs):
         NotebookCommand.init_jupyter(context)
-        os.system('jupyter notebook')
+        os.system('jupyter notebook --ip=0.0.0.0 --allow-root')
 
     @staticmethod
     def init_jupyter(context):
