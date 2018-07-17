@@ -1,4 +1,3 @@
-
 import pandas as pd
 from ..core import Plugin
 from sqlalchemy import create_engine, MetaData, Column, Table
@@ -11,30 +10,38 @@ from . import Connection
 class RDBConnection(Connection):
     def __init__(self):
         Plugin.__init__(self)
-        self._cached_conn = None
 
     def open(self):
-        if self._cached_conn is None:
-            uri = self.datasource.uri
-            if uri is None:
-                authen = None
-                uripart = self.datasource.host + ':' + str(self.datasource.port) + '/' + self.datasource.db
-                if self.datasource.user is not None:
-                    authen = self.datasource.user
-                if authen is not None and self.datasource.password is not None:
-                    authen += ':' + self.datasource.password
-                if authen is not None:
-                    uripart = authen + '@' + uripart
-                uri = self.datasource.protocol + '://' + uripart + '?charset=utf8'
-            self._cached_conn = create_engine(uri, encoding="utf-8")
-        return self._cached_conn
+        uri = self.datasource.uri
+        if uri is None:
+            authen = None
+            uripart = self.datasource.host + ':' + str(self.datasource.port) + '/' + self.datasource.db
+            if self.datasource.user is not None:
+                authen = self.datasource.user
+            if authen is not None and self.datasource.password is not None:
+                authen += ':' + self.datasource.password
+            if authen is not None:
+                uripart = authen + '@' + uripart
+            uri = self.datasource.protocol + '://' + uripart + '?charset=utf8'
+        return create_engine(uri, encoding="utf-8", pool_size=16, pool_recycle=300)
 
     def load(self, table, **kwargs):
         return self.load_query('select * from {}'.format(table))
 
     def load_query(self, query, **kwargs):
         conn = self.open()
-        return pd.read_sql_query(query, con=conn)
+        df = pd.read_sql_query(query, con=conn)
+
+        # 优化内存使用
+        # 1.使用子类型优化数字列
+        df = df.apply(pd.to_numeric, errors='ignore', downcast='unsigned')
+        # 2.使用分类来优化对象类型
+        df_obj = df.select_dtypes(include=['object'])
+        for col in df_obj.columns:
+            num_unique_values = len(df_obj[col].unique())
+            num_total_values = len(df_obj[col])
+            if num_unique_values / num_total_values < 0.5:
+                df[col] = df[col].astype('category')
 
     def store(self, df, table, **kwargs):
         assert isinstance(df, pd.DataFrame), "Invalid data type"

@@ -29,7 +29,7 @@ RUN apk add --no-cache --virtual .build-deps  \
 	&& apk add --no-cache subversion \
 	&& pip install --upgrade pip \
 	&& pip --no-cache-dir install pandas==0.20.3 \
-	&& pip --no-cache-dir install parade==0.1.20.7 \
+	&& pip --no-cache-dir install parade==0.1.21.0 \
 	&& apk del .build-deps
     #RUN pip3 --no-cache-dir install beautifulsoup4
 
