@@ -32,16 +32,24 @@ class RDBConnection(Connection):
         conn = self.open()
         df = pd.read_sql_query(query, con=conn)
 
+        logger.info("before memory: " + str(df.memory_usage(deep=True).sum() / 1024**2) + " MB")
         # 优化内存使用
         # 1.使用子类型优化数字列
-        df = df.apply(pd.to_numeric, errors='ignore', downcast='unsigned')
+        df_int = df.select_dtypes(include=['int64'])
+        convert_int = df_int.apply(pd.to_numeric, downcast='unsigned')
+        for col in df_int.columns:
+            df[col] = convert_int[col]
+
         # 2.使用分类来优化对象类型
         df_obj = df.select_dtypes(include=['object'])
-        for col in df_obj.columns:
-            num_unique_values = len(df_obj[col].unique())
-            num_total_values = len(df_obj[col])
-            if num_unique_values / num_total_values < 0.5:
-                df[col] = df[col].astype('category')
+        if len(df_obj.columns)>0:
+            for col in df_obj.columns:
+                num_unique_values = len(df_obj[col].unique())
+                num_total_values = len(df_obj[col])
+                if num_total_values > 0 and num_unique_values / num_total_values < 0.5:
+                    df[col] = df[col].astype('category')
+        logger.info("after memory: " + str(df.memory_usage(deep=True).sum() / 1024 ** 2) + " MB")
+        return df
 
     def store(self, df, table, **kwargs):
         assert isinstance(df, pd.DataFrame), "Invalid data type"
