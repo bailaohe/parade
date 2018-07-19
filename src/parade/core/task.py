@@ -180,6 +180,12 @@ class Task(object):
         """
         raise NotImplementedError
 
+    def dispose(self):
+        del self._result
+        self._result = None
+        del self._attributes
+        self._attributes = None
+
     @property
     def info(self):
         return {
