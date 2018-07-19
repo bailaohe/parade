@@ -29,7 +29,7 @@ class ParadeFlowRunner(FlowRunner):
         self.executing_flow_id = flow_id
         self.kwargs = kwargs
 
-        for   in self.executing_flow.tasks:
+        for task_name in self.executing_flow.tasks:
             self.context.get_task(task_name).pending(self.context, flow_id, flow.name)
         io_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(io_loop)
