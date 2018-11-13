@@ -1,4 +1,5 @@
-import os
+# -*- coding:utf-8 -*-
+from ..server import init_app
 from . import ParadeCommand
 
 
@@ -15,20 +16,10 @@ def _init_web():
 
 
 def _create_app(context):
-    from flask import Flask
-    from flask_cors import CORS
+
     from flask_socketio import SocketIO
 
-    template_dir = os.path.join(context.workdir, 'web')
-    static_dir = os.path.join(context.workdir, 'web', 'static')
-
-    app = Flask(context.name, template_folder=template_dir, static_folder=static_dir)
-    CORS(app)
-
-    app.parade_context = context
-
-    from ..api import parade_blueprint
-    app.register_blueprint(parade_blueprint)
+    app = init_app(context)
 
     web_blueprint = _init_web()
     app.register_blueprint(web_blueprint)
@@ -56,6 +47,7 @@ class ServerCommand(ParadeCommand):
 
     def run_internal(self, context, **kwargs):
         port = int(kwargs.get('port', 5000))
+        enable_dash = kwargs.get('enable_dash')
         app, socketio = _create_app(context)
         debug = context.conf.get_or_else('debug', False)
 
@@ -66,3 +58,5 @@ class ServerCommand(ParadeCommand):
 
     def config_parser(self, parser):
         parser.add_argument('-p', '--port', default=5000, help='the port of parade server')
+        # parser.add_argument('--enable-dash', action="store_true", help='enable dash support in parade server')
+

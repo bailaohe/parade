@@ -14,7 +14,6 @@ def _reset_logger(logger):
     logger.setLevel(logging.DEBUG)
     logger.handlers = [_console_handler]
 
-
 parade_logger = logging.getLogger('Parade')
 _reset_logger(parade_logger)
 
@@ -39,4 +38,5 @@ def logger(exec=None, flow=None, task=None):
 
     handler.setFormatter(_parade_formatter)
     parade_exec_logger.addHandler(handler)
+    parade_exec_logger.propagate = False
     return parade_exec_logger

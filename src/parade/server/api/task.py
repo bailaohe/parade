@@ -1,7 +1,7 @@
 from flask_restful import Api
 
 from . import parade_blueprint, ParadeResource, catch_parade_error
-from ..error.task_errors import TaskNotFoundError
+from parade.error.task_errors import TaskNotFoundError
 
 api = Api(parade_blueprint, catch_all_404s=True)
 
