@@ -7,8 +7,8 @@ Flask-RESTful==0.3.6
 itsdangerous==0.24
 Jinja2==2.9.6
 MarkupSafe==1.0
-numpy==1.13.0
-pandas==0.20.2
+numpy
+pandas
 psycopg2==2.7.1
 python-dateutil==2.6.1
 pytz==2017.2

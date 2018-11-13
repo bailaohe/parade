@@ -15,11 +15,11 @@ def _init_web():
     return web
 
 
-def _create_app(context):
+def _create_app(context, enable_dash=False):
 
     from flask_socketio import SocketIO
 
-    app = init_app(context)
+    app = init_app(context, enable_dash)
 
     web_blueprint = _init_web()
     app.register_blueprint(web_blueprint)
@@ -48,7 +48,7 @@ class ServerCommand(ParadeCommand):
     def run_internal(self, context, **kwargs):
         port = int(kwargs.get('port', 5000))
         enable_dash = kwargs.get('enable_dash')
-        app, socketio = _create_app(context)
+        app, socketio = _create_app(context, enable_dash=enable_dash)
         debug = context.conf.get_or_else('debug', False)
 
         socketio.run(app, host="0.0.0.0", port=port, debug=debug, log_output=False)
@@ -58,5 +58,5 @@ class ServerCommand(ParadeCommand):
 
     def config_parser(self, parser):
         parser.add_argument('-p', '--port', default=5000, help='the port of parade server')
-        # parser.add_argument('--enable-dash', action="store_true", help='enable dash support in parade server')
+        parser.add_argument('--enable-dash', action="store_true", help='enable dash support in parade server')
 
