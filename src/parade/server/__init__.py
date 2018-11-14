@@ -4,14 +4,14 @@ from ..utils.modutils import iter_classes
 from ..core.context import Context
 
 
-def load_dashboards(context, name=None):
+def load_dashboards(app, context, name=None):
     """
     generate the task dict [task_key => task_obj]
     :return:
     """
     d = {}
     for dash_class in iter_classes(Dashboard, context.name + '.dashboard'):
-        dashboard = dash_class()
+        dashboard = dash_class(app, context)
         dash_name = dashboard.name
         if name and dash_name != name:
             continue
@@ -24,7 +24,7 @@ def _load_dash(app, context):
     import dash_core_components as dcc
     from dash.dependencies import Input, Output
 
-    dashboards = load_dashboards(context)
+    dashboards = load_dashboards(app, context)
     dashboard_opts = [{'label': dashkey, 'value': dashkey} for dashkey in dashboards]
     default_dashboard = None
     if len(dashboard_opts) > 0:

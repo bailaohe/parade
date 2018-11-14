@@ -1,9 +1,16 @@
 # -*- coding:utf-8 -*-
 
 import dash_html_components as html
+import dash
+from ..core.context import Context
 
 
 class Dashboard(object):
+
+    def __init__(self, app: dash.Dash, context: Context):
+        self.app = app
+        self.context = context
+
     @property
     def name(self):
         """
