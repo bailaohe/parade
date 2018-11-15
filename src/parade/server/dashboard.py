@@ -20,5 +20,9 @@ class Dashboard(object):
         return self.__module__.split('.')[-1]
 
     @property
+    def display_name(self):
+        return self.name
+
+    @property
     def layout(self):
         return html.Div([html.H1('Content of dashboard [' + self.name + ']')])

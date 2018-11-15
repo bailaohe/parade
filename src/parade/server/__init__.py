@@ -25,7 +25,7 @@ def _load_dash(app, context):
     from dash.dependencies import Input, Output
 
     dashboards = load_dashboards(app, context)
-    dashboard_opts = [{'label': dashkey, 'value': dashkey} for dashkey in dashboards]
+    dashboard_opts = [{'label': dashboards[dashkey].display_name, 'value': dashkey} for dashkey in dashboards]
     default_dashboard = None
     if len(dashboard_opts) > 0:
         default_dashboard = dashboard_opts[0]['value']
@@ -93,6 +93,7 @@ def init_app(context: Context, enable_dash=False):
     if enable_dash:
         import dash
         app_dash = dash.Dash(__name__, server=app, url_base_pathname='/dash/')
+        app_dash.config.suppress_callback_exceptions = True
         app.dash = app_dash
 
         _load_dash(app.dash, context)
