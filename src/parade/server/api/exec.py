@@ -2,7 +2,7 @@ from flask import request
 from flask_restful import Api, reqparse
 
 from . import parade_blueprint, ParadeResource, catch_parade_error
-from ..core.engine import Engine
+from parade.core.engine import Engine
 
 api = Api(parade_blueprint, catch_all_404s=True)
 parser = reqparse.RequestParser()

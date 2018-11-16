@@ -4,8 +4,8 @@ from flask import request, make_response
 from flask_restful import Api, reqparse
 
 from . import parade_blueprint, ParadeResource, catch_parade_error
-from ..connection.localfile import LocalFile
-from ..core.task import ETLTask
+from parade.connection.localfile import LocalFile
+from parade.core.task import ETLTask
 
 api = Api(parade_blueprint, catch_all_404s=True)
 parser = reqparse.RequestParser()

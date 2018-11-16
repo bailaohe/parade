@@ -5,7 +5,7 @@ import traceback
 from flask import Blueprint, current_app
 from flask_restful import Resource, abort
 
-from ..error import ParadeError
+from parade.error import ParadeError
 
 
 class ParadeResource(Resource):
@@ -35,7 +35,9 @@ def catch_parade_error(func):
                 abort(500, code=0, message=str(e), traceback=stack_info)
             else:
                 abort(500, code=0, message=str(e))
+
     return wrapper
+
 
 parade_blueprint = Blueprint('parade', __name__)
 
