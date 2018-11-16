@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 from .dashboard import Dashboard
-from ..utils.modutils import iter_classes
+from ..utils.modutils import iter_classes, walk_modules
 from ..core.context import Context
 
 
@@ -17,6 +17,14 @@ def load_dashboards(app, context, name=None):
             continue
         d[dash_name] = dashboard
     return d
+
+
+def load_contrib_apis(app, context):
+    for api_module in walk_modules(context.name + '.api'):
+        try:
+            app.register_blueprint(api_module.bp)
+        except:
+            pass
 
 
 def _load_dash(app, context):
@@ -119,6 +127,8 @@ def start_webapp(context: Context, port=5000, enable_static=False, enable_dash=F
 
     from parade.server.api import parade_blueprint
     app.register_blueprint(parade_blueprint)
+
+    load_contrib_apis(app, context)
 
     if enable_static:
         web_blueprint = _init_web()
