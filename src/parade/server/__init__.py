@@ -74,7 +74,37 @@ def _load_dash(app, context):
             return html.Div([html.H1("dashboard not found")])
 
 
-def init_app(context: Context, enable_dash=False):
+def _init_web():
+    from flask import Blueprint
+    web = Blueprint('web', __name__)
+
+    @web.route("/")
+    def route():
+        from flask import render_template
+        return render_template("index.html")
+
+    return web
+
+
+def _init_socketio(app, context):
+    from flask_socketio import SocketIO
+    socketio = SocketIO(app, async_mode='threading')
+    sio = socketio.server
+
+    @sio.on('connect', namespace='/exec')
+    def connect(sid, environ):
+        pass
+
+    @sio.on('query', namespace='/exec')
+    def query(sid, data):
+        exec_id = data
+        sio.enter_room(sid, str(exec_id), namespace='/exec')
+        sio.emit('reply', exec_id, namespace='/exec')
+
+    context.webapp = app
+
+
+def start_webapp(context: Context, port=5000, enable_static=False, enable_dash=False, enable_socketio=True):
     import os
     from flask import Flask
     from flask_cors import CORS
@@ -90,6 +120,10 @@ def init_app(context: Context, enable_dash=False):
     from parade.server.api import parade_blueprint
     app.register_blueprint(parade_blueprint)
 
+    if enable_static:
+        web_blueprint = _init_web()
+        app.register_blueprint(web_blueprint)
+
     if enable_dash:
         import dash
         app_dash = dash.Dash(__name__, server=app, url_base_pathname='/dash/')
@@ -98,4 +132,11 @@ def init_app(context: Context, enable_dash=False):
 
         _load_dash(app.dash, context)
 
-    return app
+    debug = context.conf.get_or_else('debug', False)
+
+    if enable_socketio:
+        _init_socketio(app, context)
+        socketio = app.extensions['socketio']
+        socketio.run(app, host="0.0.0.0", port=port, debug=debug, log_output=False)
+    else:
+        app.run(host="0.0.0.0", port=port, debug=debug)
