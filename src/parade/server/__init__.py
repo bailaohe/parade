@@ -1,4 +1,5 @@
 # -*- coding:utf-8 -*-
+from .auth import ParadeUser, CustomSessionInterface
 from .dashboard import Dashboard
 from ..utils.modutils import iter_classes, walk_modules
 from ..core.context import Context
@@ -112,7 +113,30 @@ def _init_socketio(app, context):
     context.webapp = app
 
 
-def start_webapp(context: Context, port=5000, enable_static=False, enable_dash=False, enable_socketio=True):
+def _init_auth(app, context):
+    app.secret_key = 'parade'
+    from flask_login import LoginManager
+    login_manager = LoginManager()
+    login_manager.login_view = "/auth/login"
+    login_manager.init_app(app)
+
+    @login_manager.request_loader
+    def load_user_by_request(request):
+        # first, try to login using the api_key url arg
+        auth_token = request.args.get('authtoken')
+        if auth_token :
+            user = ParadeUser()
+            user.id = auth_token
+            if user:
+                return user
+
+    app.session_interface = CustomSessionInterface()
+    from . import auth
+    app.register_blueprint(auth.bp)
+
+
+def start_webapp(context: Context, port=5000, enable_auth=True, enable_static=False, enable_dash=False,
+                 enable_socketio=True):
     import os
     from flask import Flask
     from flask_cors import CORS
@@ -129,6 +153,9 @@ def start_webapp(context: Context, port=5000, enable_static=False, enable_dash=F
     app.register_blueprint(parade_blueprint)
 
     load_contrib_apis(app, context)
+
+    if enable_auth:
+        _init_auth(app, context)
 
     if enable_static:
         web_blueprint = _init_web()
