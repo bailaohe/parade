@@ -1,3 +1,5 @@
+from functools import wraps
+
 from flask import Blueprint, request, Response, redirect, url_for
 from flask.sessions import SecureCookieSessionInterface
 from flask_login import UserMixin, login_user
@@ -11,7 +13,32 @@ def check_auth(username, password):
     """This function is called to check if a username /
     password combination is valid.
     """
-    return username == 'admin' and password == 'secret'
+    return True
+
+
+def login_user(user_key, **kwargs):
+    return 'implement-me'
+
+
+def auth_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not check_request():
+            return authenticate()
+        return f(*args, **kwargs)
+
+    return decorated
+
+
+def check_request():
+    # first, try to login using the api_key url arg
+    auth_token = request.args.get('sid')
+    if auth_token:
+        user = ParadeUser()
+        user.id = auth_token
+        return user
+    return None
+
 
 
 def authenticate():
@@ -22,20 +49,41 @@ def authenticate():
         {'WWW-Authenticate': 'Basic realm="Login Required"'})
 
 
-@bp.route('/login', methods=('GET',))
+@bp.route('/login', methods=('POST',))
 def login():
+    user_key = request.args.get('username', None)
+    password = request.args.get('password', None)
+
+    return login_user(user_key, password=password)
+
+
+@bp.route('/login-view', methods=('GET',))
+def login_view():
     auth = request.authorization
     if not auth or not check_auth(auth.username, auth.password):
         return authenticate()
 
-    ## 通过Flask-Login的login_user方法登录用户
+    sid = login_user(auth.username, password=auth.password)
 
-    # 如果请求中有next参数，则重定向到其指定的地址，
-    # 没有next参数，则重定向到"index"视图
-    print(request.referrer)
     next = request.args.get('next')
-    next += '&' if '?' in next else '?'
-    next += 'authtoken=123'
+    if next is not None:
+        next += '&' if '?' in next else '?'
+        next += 'sid=' + sid
+
+    return redirect(next or url_for('index'))
+
+
+@bp.route('/login-redirect', methods=('POST',))
+def login_redirect():
+    user_key = request.form.get('username', None)
+    password = request.form.get('password', None)
+
+    sid = login_user(user_key, password=password)
+
+    next = request.args.get('next')
+    if next is not None:
+        next += '&' if '?' in next else '?'
+        next += 'sid=' + sid
 
     return redirect(next or url_for('index'))
 
@@ -44,7 +92,7 @@ class ParadeUser(UserMixin):
     pass
 
 
-class CustomSessionInterface(SecureCookieSessionInterface):
+class DisabledSessionInterface(SecureCookieSessionInterface):
     """Prevent creating session from API requests."""
 
     def save_session(self, *args, **kwargs):

@@ -1,5 +1,5 @@
 # -*- coding:utf-8 -*-
-from .auth import ParadeUser, CustomSessionInterface
+from .auth import ParadeUser, DisabledSessionInterface, check_request
 from .dashboard import Dashboard
 from ..utils.modutils import iter_classes, walk_modules
 from ..core.context import Context
@@ -85,12 +85,16 @@ def _load_dash(app, context):
 
 def _init_web():
     from flask import Blueprint
+    from flask import render_template
     web = Blueprint('web', __name__)
 
     @web.route("/")
     def route():
-        from flask import render_template
         return render_template("index.html")
+
+    @web.route("/login")
+    def login():
+        return render_template("login.html")
 
     return web
 
@@ -117,20 +121,16 @@ def _init_auth(app, context):
     app.secret_key = 'parade'
     from flask_login import LoginManager
     login_manager = LoginManager()
-    login_manager.login_view = "/auth/login"
+    login_manager.login_view = "/auth/login-view"
+    login_manager.login_view = "/login"
     login_manager.init_app(app)
 
     @login_manager.request_loader
     def load_user_by_request(request):
-        # first, try to login using the api_key url arg
-        auth_token = request.args.get('authtoken')
-        if auth_token :
-            user = ParadeUser()
-            user.id = auth_token
-            if user:
-                return user
+        return check_request()
 
-    app.session_interface = CustomSessionInterface()
+
+    app.session_interface = DisabledSessionInterface()
     from . import auth
     app.register_blueprint(auth.bp)
 
