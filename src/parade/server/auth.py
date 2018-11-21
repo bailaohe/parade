@@ -32,13 +32,12 @@ def auth_required(f):
 
 def check_request():
     # first, try to login using the api_key url arg
-    auth_token = request.args.get('sid')
+    auth_token = request.args.get('sid') or request.cookies.get('sid')
     if auth_token:
         user = ParadeUser()
         user.id = auth_token
         return user
     return None
-
 
 
 def authenticate():
@@ -47,6 +46,14 @@ def authenticate():
         'Could not verify your access level for that URL.\n'
         'You have to login with proper credentials', 401,
         {'WWW-Authenticate': 'Basic realm="Login Required"'})
+
+
+def login_response(sid):
+    from flask import make_response
+    next = request.args.get('next')
+    response = make_response(redirect(next) if next else redirect(url_for('index')))
+    response.set_cookie('sid', sid)
+    return response
 
 
 @bp.route('/login', methods=('POST',))
@@ -65,12 +72,7 @@ def login_view():
 
     sid = login_user(auth.username, password=auth.password)
 
-    next = request.args.get('next')
-    if next is not None:
-        next += '&' if '?' in next else '?'
-        next += 'sid=' + sid
-
-    return redirect(next or url_for('index'))
+    return login_response(sid)
 
 
 @bp.route('/login-redirect', methods=('POST',))
@@ -80,12 +82,7 @@ def login_redirect():
 
     sid = login_user(user_key, password=password)
 
-    next = request.args.get('next')
-    if next is not None:
-        next += '&' if '?' in next else '?'
-        next += 'sid=' + sid
-
-    return redirect(next or url_for('index'))
+    return login_response(sid)
 
 
 class ParadeUser(UserMixin):

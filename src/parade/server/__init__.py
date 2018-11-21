@@ -21,6 +21,10 @@ def load_dashboards(app, context, name=None):
 
 
 def load_contrib_apis(app, context):
+    from importlib import import_module
+    root_module = import_module(context.name)
+    if not hasattr(root_module, 'api'):
+        return
     for api_module in walk_modules(context.name + '.api'):
         try:
             app.register_blueprint(api_module.bp)
@@ -88,7 +92,9 @@ def _init_web():
     from flask import render_template
     web = Blueprint('web', __name__)
 
+    from flask_login import login_required
     @web.route("/")
+    @login_required
     def route():
         return render_template("index.html")
 
