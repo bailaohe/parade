@@ -1,8 +1,8 @@
 # -*- coding:utf-8 -*-
 from .auth import ParadeUser, DisabledSessionInterface, check_request
 from .dashboard import Dashboard
-from ..utils.modutils import iter_classes, walk_modules
 from ..core.context import Context
+from ..utils.modutils import iter_classes, walk_modules
 
 
 def load_dashboards(app, context, name=None):
@@ -22,9 +22,11 @@ def load_dashboards(app, context, name=None):
 
 def load_contrib_apis(app, context):
     from importlib import import_module
-    root_module = import_module(context.name)
-    if not hasattr(root_module, 'api'):
+    try:
+        import_module(context.name + '.api')
+    except:
         return
+
     for api_module in walk_modules(context.name + '.api'):
         try:
             app.register_blueprint(api_module.bp)
@@ -40,11 +42,12 @@ def _load_dash(app, context):
     dashboards = load_dashboards(app, context)
     dashboard_opts = [{'label': dashboards[dashkey].display_name, 'value': dashkey} for dashkey in dashboards]
     default_dashboard = None
-    if len(dashboard_opts) > 0:
-        default_dashboard = dashboard_opts[0]['value']
+    # if len(dashboard_opts) > 0:
+    #     default_dashboard = dashboard_opts[0]['value']
 
     app.layout = html.Div(
         [
+            dcc.Location(id='url', refresh=False),
             # header
             html.Div([
 
@@ -56,6 +59,10 @@ def _load_dash(app, context):
                         options=dashboard_opts,
                         value=default_dashboard
                     )], className="two columns", style={"marginTop": "16px"}),
+
+                # # title content
+                # html.Div(id="title_placeholder", className="two columns", style={"marginTop": "16px"}),
+
                 html.Div(
                     html.Img(
                         src='https://s3-us-west-1.amazonaws.com/plotly-tutorials/logo/new-branding/dash-logo-by-plotly-stripe-inverted.png',
@@ -79,12 +86,21 @@ def _load_dash(app, context):
         style={"margin": "0%"},
     )
 
-    @app.callback(Output("tab_content", "children"), [Input("tabs", "value")])
-    def render_content(tab):
+    @app.callback(Output("tab_content", "children"),
+                  [Input('url', 'pathname'),
+                   Input('tabs', 'value')])
+    def render_content(path, dropdown_tab):
+        if not path:
+            return html.Div([html.H1("Please select the dashboard")])
+        path_tab = path[len('/dash/'):]
+        if len(path_tab) == 0:
+            path_tab = None
+
+        tab = dropdown_tab or path_tab
         if tab in dashboards:
             return dashboards[tab].layout
         else:
-            return html.Div([html.H1("dashboard not found")])
+            return html.Div([html.H1("Please select the dashboard")])
 
 
 def _init_web():
@@ -135,7 +151,6 @@ def _init_auth(app, context):
     def load_user_by_request(request):
         return check_request()
 
-
     app.session_interface = DisabledSessionInterface()
     from . import auth
     app.register_blueprint(auth.bp)
@@ -169,11 +184,18 @@ def start_webapp(context: Context, port=5000, enable_auth=True, enable_static=Fa
 
     if enable_dash:
         import dash
-        app_dash = dash.Dash(__name__, server=app, url_base_pathname='/dash/')
+        # app_dash = dash.Dash(__name__, server=app, url_base_pathname='/dash/')
+        app_dash = dash.Dash(__name__, server=app)
         app_dash.config.suppress_callback_exceptions = True
-        app.dash = app_dash
+        # app.dash = app_dash
 
-        _load_dash(app.dash, context)
+        _load_dash(app_dash, context)
+
+        from flask_login import login_required
+        @app.route("/dash")
+        @login_required
+        def route_dash():
+            return app_dash.index()
 
     debug = context.conf.get_or_else('debug', False)
 
