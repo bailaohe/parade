@@ -103,20 +103,28 @@ def _load_dash(app, context):
             return html.Div([html.H1("Please select the dashboard")])
 
 
-def _init_web():
+def _init_web(enable_auth):
     from flask import Blueprint
     from flask import render_template
     web = Blueprint('web', __name__)
 
     from flask_login import login_required
-    @web.route("/")
-    @login_required
-    def route():
-        return render_template("index.html")
 
-    @web.route("/login")
-    def login():
-        return render_template("login.html")
+    if enable_auth:
+        @web.route("/")
+        @login_required
+        def route_auth():
+            return render_template("index.html")
+
+        @web.route("/login")
+        def login():
+            return render_template("login.html")
+
+    else:
+        @web.route("/")
+        def route():
+            return render_template("index.html")
+
 
     return web
 
@@ -156,19 +164,11 @@ def _init_auth(app, context):
     app.register_blueprint(auth.bp)
 
 
-def start_webapp(context: Context, port=5000, enable_auth=True, enable_static=False, enable_dash=False,
+def start_webapp(context: Context, port=5000, enable_auth=False, enable_static=False, enable_dash=False,
                  enable_socketio=True):
     import os
     from flask import Flask
     from flask_cors import CORS
-
-    def protect_views(app):
-        from flask_login import login_required
-        for view_func in app.server.view_functions:
-            if view_func.startswith(app.url_base_pathname):
-                app.server.view_functions[view_func] = login_required(app.server.view_functions[view_func])
-
-        return app
 
     template_dir = os.path.join(context.workdir, 'web')
     static_dir = os.path.join(context.workdir, 'web', 'static')
@@ -187,7 +187,7 @@ def start_webapp(context: Context, port=5000, enable_auth=True, enable_static=Fa
         _init_auth(app, context)
 
     if enable_static:
-        web_blueprint = _init_web()
+        web_blueprint = _init_web(enable_auth)
         app.register_blueprint(web_blueprint)
 
     if enable_socketio:
@@ -202,7 +202,16 @@ def start_webapp(context: Context, port=5000, enable_auth=True, enable_static=Fa
 
         _load_dash(app_dash, context)
 
-        app_dash = protect_views(app_dash)
+        def protect_views(app):
+            from flask_login import login_required
+            for view_func in app.server.view_functions:
+                if view_func.startswith(app.url_base_pathname):
+                    app.server.view_functions[view_func] = login_required(app.server.view_functions[view_func])
+
+            return app
+
+        if enable_auth:
+            app_dash = protect_views(app_dash)
 
         @app.route("/dashboard")
         def route_dash():
