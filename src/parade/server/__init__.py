@@ -92,7 +92,7 @@ def _load_dash(app, context):
     def render_content(path, dropdown_tab):
         if not path:
             return html.Div([html.H1("Please select the dashboard")])
-        path_tab = path[len('/dash/'):]
+        path_tab = path[len('/dashboard/'):]
         if len(path_tab) == 0:
             path_tab = None
 
@@ -136,7 +136,7 @@ def _init_socketio(app, context):
         sio.enter_room(sid, str(exec_id), namespace='/exec')
         sio.emit('reply', exec_id, namespace='/exec')
 
-    context.webapp = app
+    socketio.init_app(app)
 
 
 def _init_auth(app, context):
@@ -162,6 +162,14 @@ def start_webapp(context: Context, port=5000, enable_auth=True, enable_static=Fa
     from flask import Flask
     from flask_cors import CORS
 
+    def protect_views(app):
+        from flask_login import login_required
+        for view_func in app.server.view_functions:
+            if view_func.startswith(app.url_base_pathname):
+                app.server.view_functions[view_func] = login_required(app.server.view_functions[view_func])
+
+        return app
+
     template_dir = os.path.join(context.workdir, 'web')
     static_dir = os.path.join(context.workdir, 'web', 'static')
 
@@ -182,26 +190,31 @@ def start_webapp(context: Context, port=5000, enable_auth=True, enable_static=Fa
         web_blueprint = _init_web()
         app.register_blueprint(web_blueprint)
 
+    if enable_socketio:
+        _init_socketio(app, context)
+    context.webapp = app
+    debug = context.conf.get_or_else('debug', False)
+
     if enable_dash:
         import dash
-        # app_dash = dash.Dash(__name__, server=app, url_base_pathname='/dash/')
-        app_dash = dash.Dash(__name__, server=app)
+        app_dash = dash.Dash(__name__, server=app, url_base_pathname='/dashboard/')
         app_dash.config.suppress_callback_exceptions = True
-        # app.dash = app_dash
 
         _load_dash(app_dash, context)
 
-        from flask_login import login_required
-        @app.route("/dash")
-        @login_required
+        app_dash = protect_views(app_dash)
+
+        @app.route("/dashboard")
         def route_dash():
-            return app_dash.index()
+            import flask
+            return flask.redirect('/dash')
 
-    debug = context.conf.get_or_else('debug', False)
+        from werkzeug.wsgi import DispatcherMiddleware
+        app = DispatcherMiddleware(app, {
+            '/dash': app_dash.server
+        })
 
-    if enable_socketio:
-        _init_socketio(app, context)
-        socketio = app.extensions['socketio']
-        socketio.run(app, host="0.0.0.0", port=port, debug=debug, log_output=False)
+        from werkzeug.serving import run_simple
+        run_simple('0.0.0.0', port, app, use_reloader=True, use_debugger=debug)
     else:
         app.run(host="0.0.0.0", port=port, debug=debug)
