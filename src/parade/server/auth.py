@@ -61,10 +61,9 @@ def authenticate():
     #    'Could not verify your access level for that URL.\n'
     #    'You have to login with proper credentials', 401,
     #    {'WWW-Authenticate': 'Basic realm="Login Required"'})
-    # return Response(
-    #     'Could not verify your access level for that URL.\n'
-    #     'You have to login with proper credentials', 401)
-    return Response('<script>alert("登陆失败")</script>', 401)
+    return Response(
+        'Could not verify your access level for that URL.\n'
+        'You have to login with proper credentials', 401)
 
 
 def auth_required(f):
@@ -89,10 +88,22 @@ def login_response(uid, sid):
 
 @bp.route('/login', methods=('POST',))
 def login():
-    login_key = request.args.get('username', None)
+    username = request.args.get('username', None)
     password = request.args.get('password', None)
 
-    return login_user(login_key, password=password)
+    print(request.form)
+
+    uid = check_auth(username, password)
+    if not uid:
+        return authenticate()
+
+    sid = login_user(uid, username=username, password=password)
+
+    from flask import make_response
+    response = make_response("login succeeded!", 200)
+    response.set_cookie('uid', uid)
+    response.set_cookie('sid', sid)
+    return response
 
 
 @bp.route('/login-view', methods=('GET',))
