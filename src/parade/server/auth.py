@@ -91,8 +91,6 @@ def login():
     username = request.args.get('username', None)
     password = request.args.get('password', None)
 
-    print(request.form)
-
     uid = check_auth(username, password)
     if not uid:
         return authenticate()
