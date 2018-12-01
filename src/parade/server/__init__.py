@@ -1,5 +1,5 @@
 # -*- coding:utf-8 -*-
-from .auth import ParadeUser, DisabledSessionInterface, check_request
+from .auth import ParadeUser, DisabledSessionInterface, check_token
 from .dashboard import Dashboard
 from ..core.context import Context
 from ..utils.modutils import iter_classes, walk_modules
@@ -103,28 +103,33 @@ def _load_dash(app, context):
             return html.Div([html.H1("Please select the dashboard")])
 
 
-def _init_web(enable_auth):
+def _init_web(context, enable_auth):
     from flask import Blueprint
     from flask import render_template
+    from flask_login import login_required
+    import os
+
     web = Blueprint('web', __name__)
 
-    from flask_login import login_required
+    template_dir = os.path.join(context.workdir, 'web')
+    index_file = os.path.join(template_dir, 'index.html')
+    login_file = os.path.join(template_dir, 'login.html')
 
-    if enable_auth:
-        @web.route("/")
-        @login_required
-        def route_auth():
-            return render_template("index.html")
+    if os.path.exists(index_file):
+        if enable_auth:
+            @web.route("/")
+            @login_required
+            def route_auth():
+                return render_template("index.html")
+        else:
+            @web.route("/")
+            def route():
+                return render_template("index.html")
 
+    if os.path.exists(login_file) and enable_auth:
         @web.route("/login")
         def login():
             return render_template("login.html")
-
-    else:
-        @web.route("/")
-        def route():
-            return render_template("index.html")
-
 
     return web
 
@@ -157,14 +162,16 @@ def _init_auth(app, context):
 
     @login_manager.request_loader
     def load_user_by_request(request):
-        return check_request()
+        user_key = request.args.get('uid') or request.cookies.get('uid')
+        auth_token = request.args.get('sid') or request.cookies.get('sid')
+        return check_token(user_key, auth_token)
 
     app.session_interface = DisabledSessionInterface()
     from . import auth
     app.register_blueprint(auth.bp)
 
 
-def start_webapp(context: Context, port=5000, enable_auth=False, enable_static=False, enable_dash=False,
+def start_webapp(context: Context, port=5000, enable_auth=True, enable_static=False, enable_dash=False,
                  enable_socketio=True):
     import os
     from flask import Flask
@@ -186,8 +193,8 @@ def start_webapp(context: Context, port=5000, enable_auth=False, enable_static=F
     if enable_auth:
         _init_auth(app, context)
 
-    if enable_static:
-        web_blueprint = _init_web(enable_auth)
+    if enable_static or enable_dash:
+        web_blueprint = _init_web(context, enable_auth)
         app.register_blueprint(web_blueprint)
 
     if enable_socketio:
