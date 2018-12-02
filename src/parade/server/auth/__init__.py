@@ -1,0 +1,90 @@
+import sys
+
+from flask import current_app, Response
+from flask.sessions import SecureCookieSessionInterface
+from flask_login import UserMixin
+
+
+class ParadeUser(UserMixin):
+    pass
+
+
+class DisabledSessionInterface(SecureCookieSessionInterface):
+    """Prevent creating session from API requests."""
+
+    def save_session(self, *args, **kwargs):
+        return
+
+
+_auth_module = None
+
+
+def auth_module():
+    global _auth_module
+    if _auth_module:
+        return _auth_module
+
+    _context = current_app.parade_context
+
+    from importlib import import_module
+
+    try:
+        _auth_module = import_module(_context.name + '.contrib.auth')
+    except:
+        _auth_module = sys.modules[__name__]
+
+    return _auth_module
+
+
+_login_user = dict()
+
+
+def check_auth(user_login_key, secret):
+    """
+    This function is called to check if a user/secret combination is valid.
+    :param user_login_key: the login_key to login user
+    :param secret: the secret to login user
+    :return: the user_key of login-user or None if check failed
+    """
+    import hashlib
+    hl = hashlib.md5()
+    hl.update('parade'.encode(encoding='utf-8'))
+    if user_login_key == 'parade' and secret == hl.hexdigest():
+        return 'parade'
+
+    return None
+
+
+def login_user(user_key, **kwargs):
+    """
+    This function put the login-user into session and return the auth token
+    :param user_key: the key of login-user
+    :param kwargs: the extra arguments about the login-user
+    :return: the auth token put in session
+    """
+    import uuid
+    token = str(uuid.uuid3(uuid.NAMESPACE_OID, user_key))
+    _login_user[user_key] = token
+    return token
+
+
+def check_token(user_key, auth_token):
+    """
+    This function check the auth token per request
+    :param user_key: the user key the request announced issue-from
+    :param auth_token: the auth token of the login-user
+    :return: the loaded user if success otherwise None
+    """
+    if user_key and auth_token and user_key in _login_user and _login_user[user_key] == auth_token:
+        user = ParadeUser()
+        user.id = user_key
+        user.token = auth_token
+        return user
+    return None
+
+
+def authenticate():
+    """Sends a 401 response that enables basic auth"""
+    return Response(
+        'Could not verify your access level for that URL.\n'
+        'You have to login with proper credentials', 401)

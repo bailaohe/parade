@@ -1,5 +1,5 @@
 # -*- coding:utf-8 -*-
-from .auth import ParadeUser, DisabledSessionInterface, check_token
+from ..server.auth import DisabledSessionInterface, auth_module
 from .dashboard import Dashboard
 from ..core.context import Context
 from ..utils.modutils import iter_classes, walk_modules
@@ -164,11 +164,11 @@ def _init_auth(app, context):
     def load_user_by_request(request):
         user_key = request.args.get('uid') or request.cookies.get('uid')
         auth_token = request.args.get('sid') or request.cookies.get('sid')
-        return check_token(user_key, auth_token)
+        return auth_module().check_token(user_key, auth_token)
 
     app.session_interface = DisabledSessionInterface()
-    from . import auth
-    app.register_blueprint(auth.bp)
+    from .auth import api as auth_api
+    app.register_blueprint(auth_api.bp)
 
 
 def start_webapp(context: Context, port=5000, enable_auth=True, enable_static=False, enable_dash=False,
