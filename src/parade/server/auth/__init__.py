@@ -1,7 +1,6 @@
-import sys
 from functools import wraps
 
-from flask import current_app, Response, request
+from flask import Response, request, current_app
 from flask.sessions import SecureCookieSessionInterface
 from flask_login import UserMixin
 
@@ -20,83 +19,61 @@ class DisabledSessionInterface(SecureCookieSessionInterface):
 def auth_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        auth_manager = current_app.auth_manager
         auth_token = request.args.get('sid') or request.cookies.get('sid')
-        if not auth_token or not auth_module().check_token(auth_token):
-            return auth_module().authenticate()
+        if not auth_token or not auth_manager.check_token(auth_token):
+            return auth_manager.authenticate()
         return f(*args, **kwargs)
 
     return decorated
 
 
-_auth_module = None
+class AuthManager(object):
+    _login_user = dict()
 
+    def check_auth(self, user_login_key, secret):
+        """
+        This function is called to check if a user/secret combination is valid.
+        :param user_login_key: the login_key to login user
+        :param secret: the secret to login user
+        :return: the user_key of login-user or None if check failed
+        """
+        import hashlib
+        hl = hashlib.md5()
+        hl.update('parade'.encode(encoding='utf-8'))
+        if user_login_key == 'parade' and secret == hl.hexdigest():
+            return 'parade'
 
-def auth_module():
-    global _auth_module
-    if _auth_module:
-        return _auth_module
+        return None
 
-    _context = current_app.parade_context
+    def login_user(self, user_key, **kwargs):
+        """
+        This function put the login-user into session and return the auth token
+        :param user_key: the key of login-user
+        :param kwargs: the extra arguments about the login-user
+        :return: the auth token put in session
+        """
+        import uuid
+        token = str(uuid.uuid3(uuid.NAMESPACE_OID, user_key))
+        self._login_user[user_key] = token
+        return token
 
-    from importlib import import_module
+    def check_token(self, user_key, auth_token):
+        """
+        This function check the auth token per request
+        :param user_key: the user key the request announced issue-from
+        :param auth_token: the auth token of the login-user
+        :return: the loaded user if success otherwise None
+        """
+        if user_key and auth_token and user_key in self._login_user and self._login_user[user_key] == auth_token:
+            user = ParadeUser()
+            user.id = user_key
+            user.token = auth_token
+            return user
+        return None
 
-    try:
-        _auth_module = import_module(_context.name + '.contrib.auth')
-    except:
-        _auth_module = sys.modules[__name__]
-
-    return _auth_module
-
-
-_login_user = dict()
-
-
-def check_auth(user_login_key, secret):
-    """
-    This function is called to check if a user/secret combination is valid.
-    :param user_login_key: the login_key to login user
-    :param secret: the secret to login user
-    :return: the user_key of login-user or None if check failed
-    """
-    import hashlib
-    hl = hashlib.md5()
-    hl.update('parade'.encode(encoding='utf-8'))
-    if user_login_key == 'parade' and secret == hl.hexdigest():
-        return 'parade'
-
-    return None
-
-
-def login_user(user_key, **kwargs):
-    """
-    This function put the login-user into session and return the auth token
-    :param user_key: the key of login-user
-    :param kwargs: the extra arguments about the login-user
-    :return: the auth token put in session
-    """
-    import uuid
-    token = str(uuid.uuid3(uuid.NAMESPACE_OID, user_key))
-    _login_user[user_key] = token
-    return token
-
-
-def check_token(user_key, auth_token):
-    """
-    This function check the auth token per request
-    :param user_key: the user key the request announced issue-from
-    :param auth_token: the auth token of the login-user
-    :return: the loaded user if success otherwise None
-    """
-    if user_key and auth_token and user_key in _login_user and _login_user[user_key] == auth_token:
-        user = ParadeUser()
-        user.id = user_key
-        user.token = auth_token
-        return user
-    return None
-
-
-def authenticate():
-    """Sends a 401 response that enables basic auth"""
-    return Response(
-        'Could not verify your access level for that URL.\n'
-        'You have to login with proper credentials', 401)
+    def authenticate(self):
+        """Sends a 401 response that enables basic auth"""
+        return Response(
+            'Could not verify your access level for that URL.\n'
+            'You have to login with proper credentials', 401)

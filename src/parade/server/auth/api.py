@@ -1,7 +1,6 @@
 from flask import Blueprint, request, redirect, url_for
 from flask_restful import Api
-
-from . import auth_module
+from flask import current_app
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 api = Api(bp)
@@ -21,11 +20,11 @@ def login():
     username = request.args.get('username', None)
     password = request.args.get('password', None)
 
-    uid = auth_module().check_auth(username, password)
+    uid = current_app.auth_manager.check_auth(username, password)
     if not uid:
-        return auth_module().authenticate()
+        return current_app.auth_manager.authenticate()
 
-    sid = auth_module().login_user(uid, username=username, password=password)
+    sid = current_app.auth_manager.login_user(uid, username=username, password=password)
 
     from flask import make_response
     response = make_response("login succeeded!", 200)
@@ -38,12 +37,12 @@ def login():
 def login_view():
     auth = request.authorization
     if not auth:
-        return auth_module().authenticate()
-    uid = auth_module().check_auth(auth.username, auth.password)
+        return current_app.auth_manager.authenticate()
+    uid = current_app.auth_manager.check_auth(auth.username, auth.password)
     if not uid:
-        return auth_module().authenticate()
+        return current_app.auth_manager.authenticate()
 
-    sid = auth_module().login_user(uid, username=auth.username, password=auth.password)
+    sid = current_app.auth_manager.login_user(uid, username=auth.username, password=auth.password)
 
     return login_response(uid, sid)
 
@@ -53,10 +52,10 @@ def login_redirect():
     username = request.form.get('username', None)
     password = request.form.get('password', None)
 
-    uid = auth_module().check_auth(username, password)
+    uid = current_app.auth_manager.check_auth(username, password)
     if not uid:
-        return auth_module().authenticate()
+        return current_app.auth_manager.authenticate()
 
-    sid = auth_module().login_user(uid, username=username, password=password)
+    sid = current_app.auth_manager.login_user(uid, username=username, password=password)
 
     return login_response(uid, sid)

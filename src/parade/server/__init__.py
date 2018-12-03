@@ -1,5 +1,5 @@
 # -*- coding:utf-8 -*-
-from ..server.auth import DisabledSessionInterface, auth_module
+from ..server.auth import DisabledSessionInterface, AuthManager
 from .dashboard import Dashboard
 from ..core.context import Context
 from ..utils.modutils import iter_classes, walk_modules
@@ -160,11 +160,18 @@ def _init_auth(app, context):
     login_manager.login_view = "/login"
     login_manager.init_app(app)
 
+    if not context.conf.has('auth.driver'):
+        app.auth_manager = AuthManager()
+    else:
+        from ..utils.modutils import get_class
+        auth_cls = get_class(context.conf['auth.driver'], AuthManager, context.name + '.contrib.auth')
+        app.auth_manager = auth_cls()
+
     @login_manager.request_loader
     def load_user_by_request(request):
         user_key = request.args.get('uid') or request.cookies.get('uid')
         auth_token = request.args.get('sid') or request.cookies.get('sid')
-        return auth_module().check_token(user_key, auth_token)
+        return app.auth_manager.check_token(user_key, auth_token)
 
     app.session_interface = DisabledSessionInterface()
     from .auth import api as auth_api
