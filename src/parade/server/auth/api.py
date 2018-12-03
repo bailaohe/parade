@@ -1,5 +1,3 @@
-from functools import wraps
-
 from flask import Blueprint, request, redirect, url_for
 from flask_restful import Api
 
@@ -7,19 +5,6 @@ from . import auth_module
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 api = Api(bp)
-
-
-
-
-def auth_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        auth_token = request.args.get('sid') or request.cookies.get('sid')
-        if not auth_module().check_token(auth_token):
-            return auth_module().authenticate()
-        return f(*args, **kwargs)
-
-    return decorated
 
 
 def login_response(uid, sid):

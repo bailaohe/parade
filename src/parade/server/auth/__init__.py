@@ -1,6 +1,7 @@
 import sys
+from functools import wraps
 
-from flask import current_app, Response
+from flask import current_app, Response, request
 from flask.sessions import SecureCookieSessionInterface
 from flask_login import UserMixin
 
@@ -14,6 +15,17 @@ class DisabledSessionInterface(SecureCookieSessionInterface):
 
     def save_session(self, *args, **kwargs):
         return
+
+
+def auth_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth_token = request.args.get('sid') or request.cookies.get('sid')
+        if not auth_token or not auth_module().check_token(auth_token):
+            return auth_module().authenticate()
+        return f(*args, **kwargs)
+
+    return decorated
 
 
 _auth_module = None
