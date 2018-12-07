@@ -453,7 +453,7 @@ class Milestone(Task):
 
     @property
     def deps(self):
-        raise self._deps
+        return self._deps
 
     @property
     def notify_success(self):
@@ -466,10 +466,11 @@ class Flow(object):
     STATE_SUCCESS = (3, 'Succeeded')[0]
     STATE_FAILED = (4, 'Failed')[0]
 
-    def __init__(self, name, tasks, deps=None):
+    def __init__(self, name, tasks, deps=None, milestones=None):
         self.name = name
         self.tasks = tasks
         self.deps = deps if deps else {}
+        self.milestones = milestones if milestones else {}
         self.forest = self.validate()
 
     def __repr__(self):

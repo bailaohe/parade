@@ -1,10 +1,13 @@
+# -*- coding:utf-8 -*-
+
+import datetime
+import os
 from io import BytesIO
 
-from ..connection import Connection
 import pandas as pd
-import os
-import datetime
 from pandas.compat import cPickle as pkl
+
+from ..connection import Connection
 
 
 class LocalFile(Connection):
@@ -27,9 +30,15 @@ class LocalFile(Connection):
             df.to_excel(writer, index=False)
             writer.save()
         elif export_type == 'csv':
-            export_io = BytesIO(df.to_csv(target_path, index=False, chunksize=4096).encode())
+            if not target_path:
+                export_io = BytesIO(df.to_csv(None, index=False, chunksize=4096).encode())
+            else:
+                df.to_csv(os.path.join(target_path, table), index=False, chunksize=4096)
         elif export_type == 'json':
-            export_io = BytesIO(df.to_json(target_path, orient='records').encode())
+            if not target_path:
+                export_io = BytesIO(df.to_json(None, orient='records', force_ascii=False).encode())
+            else:
+                df.to_json(os.path.join(target_path, table), orient='records', force_ascii=False)
         elif export_type == 'pickle':
             pkl.dump(df, export_io, protocol=pkl.HIGHEST_PROTOCOL)
         else:
