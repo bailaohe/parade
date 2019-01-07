@@ -51,6 +51,18 @@ class Task(object):
         return self.__module__.split('.')[-1]
 
     @property
+    def namespace(self):
+        """
+        get the identifier of the task, the default is the class name of task
+        :return: the task identifier
+        """
+        toks = self.__module__.split('.')
+        toks.pop(0)
+        toks.pop(0)
+        toks.pop()
+        return '.'.join(toks)
+
+    @property
     def deps(self):
         """
         a string-array to specified the dependant tasks has to be completed before this one
@@ -467,6 +479,12 @@ class Flow(object):
     STATE_FAILED = (4, 'Failed')[0]
 
     def __init__(self, name, tasks, deps=None, milestones=None):
+        """
+        :param name:  the name of the flow
+        :param tasks: the tasks entity to form the flow
+        :param deps:  the dependencies in the flow
+        :param milestones: the *FAKE*-tasks to complete the flow
+        """
         self.name = name
         self.tasks = tasks
         self.deps = deps if deps else {}
