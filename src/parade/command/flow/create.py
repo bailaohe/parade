@@ -28,7 +28,9 @@ def _build_flow_via_package(context):
     milestones = package_task_list_dict.keys()
 
     for pkg in milestones:
-        pkg_tasks = [task for task_dict.values()                                                                                                                                                                                                                                                                                                                                             ]
+        pkg_tasks = list(filter(lambda t: t.namespace == pkg, task_dict.values()))
+        if len(pkg_tasks) > 0:
+
 
     print('hello')
 
