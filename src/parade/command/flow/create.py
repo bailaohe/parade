@@ -1,5 +1,7 @@
 from collections import defaultdict
 
+from parade.core.task import Flow
+
 from ...core.context import Context
 from .. import ParadeCommand
 from ...utils.log import parade_logger as logger
@@ -8,9 +10,10 @@ from ...utils.log import parade_logger as logger
 def _build_flow_via_package(context):
     package_task_list_dict = defaultdict(list)
     task_dict = context.load_tasks()
+    created_flow = {}
 
-    for task in task_dict.values():
-        package_task_list_dict[task.namespace].append(task)
+    for task_name, task in task_dict.items():
+        package_task_list_dict[task.namespace].append(task_name)
 
     deps = dict([(task.name, task.deps) for task in context.load_tasks().values() if len(task.deps) > 0])
 
@@ -28,16 +31,35 @@ def _build_flow_via_package(context):
     milestones = package_task_list_dict.keys()
 
     for pkg in milestones:
-        pkg_tasks = list(filter(lambda t: t.namespace == pkg, task_dict.values()))
-        if len(pkg_tasks) > 0:
+        _build_internal_flow(pkg, package_task_list_dict, task_dict, deps, created_flow)
+
+    return created_flow
 
 
-    print('hello')
+def _build_internal_flow(pkg, package_task_list_dict, task_dict, deps, created_flow):
+    if pkg in created_flow:
+        return created_flow[pkg]
+    flow_tasks = set(package_task_list_dict[pkg])
+    flow_deps = {pkg: flow_tasks}
+    flow_milestones = set(pkg,)
+    for task_name in flow_tasks:
+        if task_name not in deps:
+            continue
+        task_deps = deps[task_name]
+        flow_deps[task_name] = task_deps
 
+        for task_dep in task_deps:
+            if task_dep not in task_dict and task_dep in package_task_list_dict:
+                subflow = _build_internal_flow(task_dep, package_task_list_dict, task_dict, deps, created_flow)
+                flow_milestones = flow_milestones.union({task_dep}, subflow.milestones)
+                flow_tasks = flow_tasks.union(subflow.tasks)
+                flow_deps = flow_deps.union(subflow.deps)
+
+    created_flow[pkg] = Flow(pkg, flow_tasks, flow_deps, flow_milestones)
+    return created_flow[pkg]
 
 
 class MakeFlowCommand(ParadeCommand):
-
     requires_workspace = True
 
     @property
@@ -93,4 +115,3 @@ class MakeFlowCommand(ParadeCommand):
         parser.add_argument('--enable-package-subflow', action="store_true",
                             help='flag to enable sub-flow creation considering package')
         parser.add_argument('-d', '--dep', action='append')
-
