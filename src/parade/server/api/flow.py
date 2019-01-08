@@ -24,12 +24,13 @@ class FlowAPI(ParadeResource):
     """
 
     def get(self, flow):
-        uniform = request.args.get('uniform', type=bool, default=True)
+        # uniform = request.args.get('uniform', type=bool, default=True)
         flow_obj = self.context.get_flowstore().load(flow)
-        if uniform:
-            flow_obj = flow_obj.uniform()
+        # if uniform:
+        #     flow_obj = flow_obj.uniform()
         if not flow_obj:
             abort(404, message='Flow [{}] not found.'.format(flow))
+
         return flow_obj.to_dict()
 
     def delete(self, flow):

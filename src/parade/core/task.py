@@ -536,6 +536,7 @@ class Flow(object):
     def to_dict(self):
         return {
             'name': self.name,
-            'tasks': self.tasks,
+            'tasks': list(set.union(set(self.tasks), set(self.milestones))),
+            # 'tasks': self.tasks,
             'deps': dict([(t, list(d)) for (t, d) in self.deps.items()])
         }

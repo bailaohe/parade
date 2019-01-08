@@ -5,6 +5,7 @@ class FlowStore(Plugin):
     """
     The flowstore to support task-flow scheduling
     """
+
     def create(self, flow, *tasks, deps=None, **kwargs):
         """
         schedule the task-flow

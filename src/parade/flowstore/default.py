@@ -23,7 +23,7 @@ class ParadeFlowStore(FlowStore):
                 for dep in rawflow['deps']:
                     (l, r) = tuple(dep.split('->'))
                     _deps[l] = set(r.split(','))
-                flow = Flow(name, rawflow['tasks'], _deps)
+                flow = Flow(name, rawflow['tasks'], _deps, rawflow['milestones'])
                 return flow
         return None
 
@@ -37,16 +37,17 @@ class ParadeFlowStore(FlowStore):
         return set([os.path.splitext(file)[0]
                     for file in listdir(self.flow_dir) if isfile(join(self.flow_dir, file)) and file.endswith('.yml')])
 
-    def create(self, flow, *tasks, deps=None):
-        if not deps:
-            deps = {}
+    def create(self, flow, *tasks, deps=None, milestones=None):
+        deps = deps or {}
+        milestones = milestones or {}
 
-        Flow(flow, tasks, deps)
+        Flow(flow, tasks, deps, milestones)
 
         dep_lines = list(map(lambda x: x[0] + '->' + ','.join(x[1]), deps.items()))
         create_flow = {
             'tasks': list(tasks),
-            'deps': dep_lines
+            'deps': dep_lines,
+            'milestones': milestones
         }
 
         class IndentDumper(yaml.Dumper):
