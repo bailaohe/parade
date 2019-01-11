@@ -5,9 +5,6 @@ from ..core.task import Flow, Task
 from ..flowrunner import FlowRunner
 from ..utils.log import logger
 
-from concurrent.futures import ThreadPoolExecutor
-from functools import partial
-
 
 class ParadeFlowRunner(FlowRunner):
     # the thread pool to convert block execution of task into async process
@@ -16,9 +13,6 @@ class ParadeFlowRunner(FlowRunner):
     executing_flow = None
     executing_flow_id = 0
     kwargs = {}
-
-    task_workers = ThreadPoolExecutor(thread_name_prefix='parade-task-worker-')
-    concurrency = 16
 
     def initialize(self, context, conf):
         FlowRunner.initialize(self, context, conf)
@@ -37,30 +31,38 @@ class ParadeFlowRunner(FlowRunner):
 
         for task_name in self.executing_flow.tasks:
             self.context.get_task(task_name).pending(self.context, flow_id, flow.name)
+        io_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(io_loop)
         self.wait_queue = queues.Queue()
         self.exec_queue = queues.Queue()
-
-        ret = asyncio.run(self.execute_dag_ioloop())
+        ret = io_loop.run_until_complete(self.execute_dag_ioloop())
+        io_loop.close()
         return ret
 
-    async def execute_dag_ioloop(self):
+    @asyncio.coroutine
+    def daemon_loop(self):
+        yield from self.execute_dag_ioloop()
+
+    @asyncio.coroutine
+    def execute_dag_ioloop(self):
         """
         the async process to execute task DAG
         :return:
         """
 
         # add to wait queue, waiting to execute
-        await self.wait_queue.put(set(self.executing_flow.tasks))
+        yield from self.wait_queue.put(set(self.executing_flow.tasks))
 
         executing, successed, failed = set(), set(), set()
 
-        async def _produce_tasks():
+        @asyncio.coroutine
+        def _produce_tasks():
             """
             the inner async procedure of task producer
             :return:
             """
             # wait until all tasks in executing queue are done
-            await self.exec_queue.join()
+            yield from self.exec_queue.join()
 
             # reset the *executing* and *done* set
             executing.clear()
@@ -68,24 +70,18 @@ class ParadeFlowRunner(FlowRunner):
             failed.clear()
 
             # retrieve the task-DAG from wait-queue to exec-queue
-            sched_task_names = await self.wait_queue.get()
+            sched_task_names = yield from self.wait_queue.get()
             for sched_task_name in sched_task_names:
-                await self.exec_queue.put(sched_task_name)
+                yield from self.exec_queue.put(sched_task_name)
             self.wait_queue.task_done()
 
-        async def _consume_task():
+        @asyncio.coroutine
+        def _consume_task():
             """
             the inner async procedure of task consumers
             :return:
             """
-
-            loop = asyncio.get_event_loop()
-
-            try:
-                next_task_name = self.exec_queue.get_nowait()
-            except:
-                logger(exec=self.executing_flow_id, flow=self.executing_flow.name).error("next task fetch failed")
-                pass
+            next_task_name = self.exec_queue.get_nowait()
 
             logger(exec=self.executing_flow_id, flow=self.executing_flow.name).info("pick up task [{}] ...".format(next_task_name))
             try:
@@ -107,7 +103,8 @@ class ParadeFlowRunner(FlowRunner):
                     executing.add(next_task_name)
 
                     logger(exec=self.executing_flow_id, flow=self.executing_flow.name).info("task [{}] start executing ...".format(next_task_name))
-                    await loop.run_in_executor(partial(self.task_workers, **self.kwargs), next_task.execute, self.context)
+                    next_task.execute(self.context, flow_id=self.executing_flow_id, flow=self.executing_flow,
+                                      **self.kwargs)
                     if next_task.result_code == Task.RET_CODE_SUCCESS:
                         logger(exec=self.executing_flow_id, flow=self.executing_flow.name).info("task [{}] executed successfully".format(next_task_name))
                         successed.add(next_task_name)
@@ -124,38 +121,31 @@ class ParadeFlowRunner(FlowRunner):
                 else:
                     # otherwise, re-put the task into the end of the queue
                     # sleep for 1 second
-                    await self.exec_queue.put(next_task_name)
-                    await asyncio.sleep(1)
+                    yield from self.exec_queue.put(next_task_name)
+                    yield from asyncio.sleep(1)
             except Exception as e:
                 logger(exec=self.executing_flow_id, flow=self.executing_flow.name).exception(str(e))
             finally:
                 self.exec_queue.task_done()
 
-        async def consumer():
-            consumer_tasks = []
-            while len(executing) + len(failed) < len(executing):
+        @asyncio.coroutine
+        def consumer():
+            while True:
+                yield from _consume_task()
 
-                # wait all task to be done if too much is issued
-                if len(consumer_tasks) >= self.concurrency:
-                    for ct in consumer_tasks:
-                        await ct
-                    consumer_tasks = []
-
-                # create a new task
-                consumer_tasks.append(asyncio.ensure_future(_consume_task()))
-
-            if len(consumer_tasks) > 0:
-                for ct in consumer_tasks:
-                    await ct
-
-        async def producer():
-            await _produce_tasks()
+        @asyncio.coroutine
+        def producer():
+            yield from _produce_tasks()
 
         # we use a single producer within the main-thread
-        await producer()
-        await consumer()
+        yield from producer()
 
-        await self.exec_queue.join()
+        try:
+            yield from consumer()
+        except:
+            pass
+
+        yield from self.exec_queue.join()
         assert len(executing) == len(successed) + len(failed)
 
         retcode = Task.RET_CODE_SUCCESS if len(failed) == 0 else Task.RET_CODE_FAIL
