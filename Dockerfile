@@ -34,7 +34,7 @@ RUN apk add --no-cache --virtual .build-deps  \
 	&& pip --no-cache-dir install dash-core-components \
 	&& pip --no-cache-dir install dash-table \
 	&& pip --no-cache-dir install objgraph \
-	&& pip --no-cache-dir install parade==0.1.22.3 \
+	&& pip --no-cache-dir install parade==0.1.22.4 \
 	&& apk del .build-deps
 
 EXPOSE 5000
