@@ -21,3 +21,4 @@ Werkzeug==0.12.2
 XlsxWriter==0.9.6
 PyGithub==1.34
 flask-login
+dash-html-components
