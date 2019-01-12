@@ -18,7 +18,7 @@ class ParadeFlowRunner(FlowRunner):
     kwargs = {}
 
     task_workers = ThreadPoolExecutor(thread_name_prefix='parade-task-worker-')
-    concurrency = 16
+    concurrency = 8
 
     def initialize(self, context, conf):
         FlowRunner.initialize(self, context, conf)
@@ -37,9 +37,8 @@ class ParadeFlowRunner(FlowRunner):
 
         for task_name in self.executing_flow.tasks:
             self.context.get_task(task_name).pending(self.context, flow_id, flow.name)
-        self.wait_queue = queues.Queue()
-        self.exec_queue = queues.Queue()
-
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         ret = asyncio.run(self.execute_dag_ioloop())
         return ret
 
@@ -48,6 +47,9 @@ class ParadeFlowRunner(FlowRunner):
         the async process to execute task DAG
         :return:
         """
+        self.wait_queue = queues.Queue()
+        self.exec_queue = queues.Queue()
+
 
         # add to wait queue, waiting to execute
         await self.wait_queue.put(set(self.executing_flow.tasks))
@@ -84,8 +86,8 @@ class ParadeFlowRunner(FlowRunner):
             try:
                 next_task_name = self.exec_queue.get_nowait()
             except:
-                logger(exec=self.executing_flow_id, flow=self.executing_flow.name).error("next task fetch failed")
-                pass
+                #logger(exec=self.executing_flow_id, flow=self.executing_flow.name).error("next task fetch failed")
+                return
 
             logger(exec=self.executing_flow_id, flow=self.executing_flow.name).info("pick up task [{}] ...".format(next_task_name))
             try:
@@ -107,7 +109,7 @@ class ParadeFlowRunner(FlowRunner):
                     executing.add(next_task_name)
 
                     logger(exec=self.executing_flow_id, flow=self.executing_flow.name).info("task [{}] start executing ...".format(next_task_name))
-                    await loop.run_in_executor(partial(self.task_workers, **self.kwargs), next_task.execute, self.context)
+                    await loop.run_in_executor(self.task_workers, partial(next_task.execute, **self.kwargs), self.context)
                     if next_task.result_code == Task.RET_CODE_SUCCESS:
                         logger(exec=self.executing_flow_id, flow=self.executing_flow.name).info("task [{}] executed successfully".format(next_task_name))
                         successed.add(next_task_name)
@@ -133,10 +135,12 @@ class ParadeFlowRunner(FlowRunner):
 
         async def consumer():
             consumer_tasks = []
-            while len(executing) + len(failed) < len(executing):
+            while len(successed) + len(failed) < len(self.executing_flow.tasks):
 
                 # wait all task to be done if too much is issued
-                if len(consumer_tasks) >= self.concurrency:
+                if len(consumer_tasks) >= min(len(self.executing_flow.tasks), self.concurrency):
+                    logger(exec=self.executing_flow_id, flow=self.executing_flow.name).info(
+                        "Maybe too many tasks [{}], rest for a while ... ".format(len(consumer_tasks)))
                     for ct in consumer_tasks:
                         await ct
                     consumer_tasks = []
