@@ -19,8 +19,7 @@ Operating System :: POSIX
 setup(
     name='parade',
     # auto generate version
-    # use_scm_version=True,
-    version='0.1.22.4',
+    use_scm_version=True,
     author='He Bai',
     author_email='bailaohe@gmail.com',
 
@@ -34,7 +33,7 @@ setup(
     install_requires=['pandas', 'sqlalchemy', 'requests', 'pyyaml',
                       'psycopg2', 'mysqlclient', 'xlsxwriter',
                       'flask', 'flask_cors', 'flask_restful', 'Flask-SocketIO',
-                      'PyGithub', 'pymongo', 'redis', 'jupyter', 'nbformat'],
+                      'pymongo', 'redis'],
 
     packages=find_packages('src'),
     package_dir=({'parade': 'src/parade'}),
@@ -51,10 +50,11 @@ setup(
 
     extras_require={
         "feature": ["parade-feature"],
+        "notebook": ["parade-notebook"],
     },
-    # setup_requires=[
-    #     "setuptools_scm>=1.5",
-    # ],
+    setup_requires=[
+        "setuptools_scm>=1.5",
+    ],
     python_requires=">=3.4",
     # download_url='https://github.com/bailaohe/parade/tarball/0.1',
 )
