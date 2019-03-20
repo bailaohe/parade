@@ -49,14 +49,9 @@ setup(
         ],
     },
 
-    # extras_require={
-    #     "solr": ["solr-doc-manager"],
-    #     "elastic": ["elastic-doc-manager"],
-    #     "elastic-aws": ["elastic-doc-manager[aws]"],
-    #     "elastic2": ["elastic2-doc-manager[elastic2]"],
-    #     "elastic5": ["elastic2-doc-manager[elastic5]"],
-    #     "elastic2-aws": ["elastic2-doc-manager[elastic2,aws]"],
-    # },
+    extras_require={
+        "feature": ["parade-feature"],
+    },
     # setup_requires=[
     #     "setuptools_scm>=1.5",
     # ],
