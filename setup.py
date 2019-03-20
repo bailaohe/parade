@@ -32,7 +32,6 @@ setup(
 
     install_requires=['pandas', 'sqlalchemy', 'requests', 'pyyaml',
                       'psycopg2', 'mysqlclient', 'xlsxwriter',
-                      'flask', 'flask_cors', 'flask_restful', 'Flask-SocketIO',
                       'pymongo', 'redis'],
 
     packages=find_packages('src'),
@@ -51,6 +50,8 @@ setup(
     extras_require={
         "feature": ["parade-feature"],
         "notebook": ["parade-notebook"],
+        "server": ["parade-server"],
+        "dash-server": ["parade-server[dash]"],
     },
     setup_requires=[
         "setuptools_scm>=1.5",
