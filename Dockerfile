@@ -28,13 +28,7 @@ RUN apk add --no-cache --virtual .build-deps  \
 	&& apk add --no-cache mariadb-dev \
 	&& apk add --no-cache subversion \
 	&& pip install --upgrade pip \
-	&& pip --no-cache-dir install pandas \
-	&& pip --no-cache-dir install dash \
-	&& pip --no-cache-dir install dash-html-components \
-	&& pip --no-cache-dir install dash-core-components \
-	&& pip --no-cache-dir install dash-table \
-	&& pip --no-cache-dir install objgraph \
-	&& pip --no-cache-dir install parade==0.1.22.4 \
+	&& pip --no-cache-dir install parade==0.2.0.4 \
 	&& apk del .build-deps
 
 EXPOSE 5000
