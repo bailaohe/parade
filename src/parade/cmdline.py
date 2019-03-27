@@ -22,8 +22,6 @@ def _get_commands(in_workspace):
             else:
                 cmd_path = cmd_group + '.' + cmd_name
                 d[cmd_path] = (cmd(), cmd_name, cmd_group)
-                for cmd_alias in d[cmd_path][0].aliases:
-                    d[cmd_group + '.' + cmd_alias] = d[cmd_path]
 
     return d
 

@@ -30,9 +30,7 @@ setup(
     platforms=["any"],
     classifiers=filter(None, classifiers.split("\n")),
 
-    install_requires=['pandas', 'sqlalchemy', 'requests', 'pyyaml',
-                      'psycopg2', 'mysqlclient', 'xlsxwriter',
-                      'pymongo', 'redis'],
+    install_requires=['pandas', 'sqlalchemy', 'requests', 'pyyaml', 'xlsxwriter'],
 
     packages=find_packages('src'),
     package_dir=({'parade': 'src/parade'}),
@@ -52,6 +50,10 @@ setup(
         "notebook": ["parade-notebook"],
         "server": ["parade-server"],
         "dash-server": ["parade-server[dash]"],
+        "mysql": ["mysqlclient"],
+        "pg": ["psycopg2"],
+        "mongo": ["pymongo"],
+        "redis": ["redis"],
     },
     setup_requires=[
         "setuptools_scm>=1.5",
