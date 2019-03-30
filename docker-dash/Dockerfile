@@ -30,9 +30,7 @@ RUN apk add --no-cache --virtual .build-deps  \
         zlib-dev \
         libxml2-dev \
         libxslt-dev \
-    && pip --no-cache-dir install flask-login \
     && pip --no-cache-dir install flask-ldap3-login \
-    && pip --no-cache-dir install flask-caching \
     && pip --no-cache-dir install python-consul \
     && pip --no-cache-dir install jira \
     && apk del .build-deps
