@@ -17,11 +17,17 @@ class ExecCommand(ParadeCommand):
     def run_internal(self, context, **kwargs):
         engine = Engine(context)
 
-        tasks = kwargs.get('task')
-        force = kwargs.get('force')
-        nodep = kwargs.get('nodep')
+        tasks = kwargs.pop('task')
+        force = kwargs.pop('force')
+        nodep = kwargs.pop('nodep')
 
-        return engine.execute_async(tasks=tasks, force=force, nodep=nodep)
+        task_args = kwargs.pop('task_arg')
+        if task_args:
+            for task_arg in task_args:
+                arg_key, arg_val = task_arg[0].split('=')
+                kwargs[arg_key] = arg_val
+
+        return engine.execute_async(tasks=tasks, force=force, nodep=nodep, **kwargs)
 
     def short_desc(self):
         return 'execute a set of tasks'
@@ -29,4 +35,5 @@ class ExecCommand(ParadeCommand):
     def config_parser(self, parser):
         parser.add_argument('--nodep', action="store_true", help='execute tasks without considering dependencies')
         parser.add_argument('--force', action="store_true", help='force the task to execute')
+        parser.add_argument('--task-arg', action="append", nargs=1, help='the task argument')
         parser.add_argument('task', nargs='*', help='the task to schedule')

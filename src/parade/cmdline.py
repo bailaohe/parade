@@ -63,7 +63,9 @@ def execute():
     cmd_path = args.command if not hasattr(args, 'subcommand') else args.command + '.' + args.subcommand
 
     command = cmds[cmd_path][0]
-    command_args = args.__dict__
+
+    command_args = {}
+    command_args.update(args.__dict__)
 
     context = None
     if inworkspace and command.requires_workspace:
