@@ -52,7 +52,7 @@ class Engine(object):
         task.execute(self.context, **kwargs)
         return task.result_code, task.result, task.attributes
 
-    def execute_async(self, flow_name=None, tasks=None, new_thread=False, force=False, nodep=False):
+    def execute_async(self, flow_name=None, tasks=None, new_thread=False, force=False, nodep=False, **kwargs):
         """
         Execute a flow or a series tasks in async mode
         :param flow_name: the flow to execute
@@ -83,14 +83,14 @@ class Engine(object):
             deps = dict([(task.name, task.deps) for task in self.context.load_tasks().values() if len(task.deps) > 0])
         flow = Flow(self.context.name, tasks, deps)
         logger.info('Temporary flow [{}] created!'.format(flow.name))
-        return self._execute_flow(flow, new_thread=new_thread, force=force)
+        return self._execute_flow(flow, new_thread=new_thread, force=force, **kwargs)
 
-    def _execute_flow(self, flow, new_thread=False, force=False):
+    def _execute_flow(self, flow, new_thread=False, force=False, **kwargs):
         flow_id = self.context.on_flow_start(flow)
         flowrunner = self.context.get_flowrunner()
 
         if new_thread:
-            self.thread_pool.submit(flowrunner.submit, flow, flow_id=flow_id, force=force)
+            self.thread_pool.submit(flowrunner.submit, flow, flow_id=flow_id, force=force, **kwargs)
             return flow_id
         else:
-            return flowrunner.submit(flow, flow_id=flow_id, force=force)
+            return flowrunner.submit(flow, flow_id=flow_id, force=force, **kwargs)
