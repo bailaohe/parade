@@ -14,9 +14,7 @@ def _get_commands(in_workspace):
         if in_workspace or not cmd.requires_workspace:
             cmd_name = cmd.__module__.split('.')[-1]
             cmd_group = None if len(cmd.__module__) == len('parade.command') + 1 + len(cmd_name) else cmd.__module__[
-                                                                                                      len(
-                                                                                                          'parade.command') + 1:-len(
-                                                                                                          cmd_name) - 1]
+                len('parade.command') + 1:-len(cmd_name) - 1]
             if not cmd_group:
                 d[cmd_name] = (cmd(), cmd_name, None)
             else:

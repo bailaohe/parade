@@ -1,5 +1,5 @@
-from parade.command import ParadeCommand
-from parade.core.engine import Engine
+from .. import ParadeCommand
+from ...core.engine import Engine
 
 
 class ExecCommand(ParadeCommand):

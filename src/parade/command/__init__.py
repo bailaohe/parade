@@ -1,7 +1,3 @@
-from ..core.context import Context
-from ..utils.workspace import inside_workspace
-
-
 class ParadeCommand(object):
     """
     The base class to implement a sub-command in parade command line entry point
