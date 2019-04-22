@@ -185,7 +185,7 @@ class Context(object):
     def on_task_cancelled(self, task, failed_deps):
         self.sys_recorder.mark_task_cancelled(task.exec_id, failed_deps)
 
-        if hasattr(self, 'webapp'):
+        if hasattr(self, 'webapp') and 'socketio' in self.webapp.extensions:
             socketio = self.webapp.extensions['socketio']
             socketio.emit('update', {
                 'flow-id': task.flow_id,
@@ -197,7 +197,7 @@ class Context(object):
     def on_task_start(self, task):
         self.sys_recorder.mark_task_start(task.exec_id)
 
-        if hasattr(self, 'webapp'):
+        if hasattr(self, 'webapp') and 'socketio' in self.webapp.extensions:
             socketio = self.webapp.extensions['socketio']
             socketio.emit('update', {
                 'flow-id': task.flow_id,
@@ -209,7 +209,7 @@ class Context(object):
     def on_task_success(self, task):
         self.sys_recorder.mark_task_success(task.exec_id)
 
-        if hasattr(self, 'webapp'):
+        if hasattr(self, 'webapp') and 'socketio' in self.webapp.extensions:
             socketio = self.webapp.extensions['socketio']
             socketio.emit('update', {
                 'flow-id': task.flow_id,
@@ -224,7 +224,7 @@ class Context(object):
     def on_task_failed(self, task, err):
         self.sys_recorder.mark_task_failed(task.exec_id, err)
 
-        if hasattr(self, 'webapp'):
+        if hasattr(self, 'webapp') and 'socketio' in self.webapp.extensions:
             socketio = self.webapp.extensions['socketio']
             socketio.emit('update', {
                 'flow-id': task.flow_id,
