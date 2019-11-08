@@ -2,7 +2,7 @@ from collections import defaultdict
 
 from .recorder import ParadeRecorder
 from ..config import ConfigStore, ConfigEntry
-from ..connection import Connection
+from ..connection import Connection, Datasource
 from ..core.task import Task
 from ..error.task_errors import DuplicatedTaskExistError
 from ..flowrunner import FlowRunner
@@ -24,25 +24,21 @@ class Context(object):
         self.workdir = workspace_settings['path']
 
         self._task_dict = defaultdict(Task)
+        self._ds_dict = defaultdict(Datasource)
+
         self._conn_cache = defaultdict(Connection)
         self._notifier = None
         self._flowstore = None
         self._flowrunner = None
         self._configstore = None
-
-        config_settings = bootstrap['config']
-        self.conf = ConfigEntry({'config': config_settings})
-
-        self._init_configstore()
+        self._init_configstore(bootstrap['config'])
 
         self.conf = self._configstore.load()
 
-    # ========================Context as a task store=========================
-    # ========================================================================
     def load_tasks(self, name=None, task_class=Task):
         """
-        generate the task dict [task_key => task_obj]
-        :return:
+        Generate the task dict [task_key => task_obj]
+        :return: the loaded task dict
         """
         d = {}
         for task_class in iter_classes(task_class, self.name + '.task'):
@@ -56,6 +52,12 @@ class Context(object):
         return d
 
     def get_task(self, name, task_class=Task):
+        """
+        Get the task instance by name
+        :param name: the name of task
+        :param task_class: the task class
+        :return: the loaded task instance
+        """
         if name in self._task_dict:
             return self._task_dict[name]
         task = self.load_tasks(name, task_class=task_class)[name]
@@ -128,24 +130,37 @@ class Context(object):
 
         return self._flowrunner
 
-    def _init_configstore(self):
+    def _init_configstore(self, store_config):
+        """
+        Load the config store plugin instance
+        :return: the loaded config store
+        """
+        self.conf = ConfigEntry({'config': store_config})
         if not self._configstore:
             self._configstore = self._load_plugin('config', ConfigStore)
 
-    def _load_plugin(self, plugin_token, plugin_class, plugin_key=None, default_conf=None):
-        conf = default_conf
+    def _load_plugin(self, plugin_token, plugin_class, plugin_key=None, provided_conf: ConfigEntry = None):
+        """
+        Load the plugin instance
+        :param plugin_token: the plugin token
+        :param plugin_class: the class of plugin to load
+        :param plugin_key: the key of plugin to load
+        :param provided_conf: the provided conf to use
+        :return: the loaded plugin instance
+        """
+        conf = provided_conf or self.conf
 
-        if self.conf.has(plugin_token):
-            conf = self.conf[plugin_token][plugin_key] if plugin_key else self.conf[plugin_token]
-            assert conf.has('driver'), 'no driver provided in {} section'.format(plugin_token)
-            driver = conf['driver']
+        if conf.has(plugin_token):
+            plugin_conf = conf[plugin_token][plugin_key] if plugin_key else conf[plugin_token]
+            assert plugin_conf.has('driver'), 'no driver provided in {} section'.format(plugin_token)
+            driver = plugin_conf['driver']
         else:
             driver = 'default'
 
         plugin_cls = get_class(driver, plugin_class, 'parade.' + plugin_token, self.name + '.contrib.' + plugin_token)
         assert plugin_cls
         plugin = plugin_cls()
-        plugin.initialize(self, conf)
+        plugin.initialize(self, plugin_conf)
         return plugin
 
     # ========================================================================

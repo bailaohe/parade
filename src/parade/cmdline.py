@@ -32,6 +32,10 @@ def _get_config_repo(driver, uri, workdir=None):
 
 
 def execute():
+    """
+
+    :return:
+    """
     # load the commands and parse arguments
     parser = argparse.ArgumentParser(description='The CLI of parade engine.')
     inworkspace = inside_workspace()

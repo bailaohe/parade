@@ -1,6 +1,10 @@
+import os
 import copy
+from pathlib import Path
+import yaml as yamllib
 
 from ..utils.modutils import get_class
+from ..utils.misc import merge_dict
 from ..core import Plugin
 
 
@@ -89,13 +93,19 @@ class ConfigParser(object):
 
 class ConfigStore(Plugin):
     def load(self, **kwargs):
-        import os
+        raw_conf = dict()
+        default_config_file = os.path.join(Path.home(), '.config', 'parade', 'default.yml')
+        if os.path.exists(default_config_file):
+            with open(default_config_file, 'r') as f:
+                default_config_content = f.read()
+                raw_conf = yamllib.load(default_config_content)
+
         config_name = self.conf['name']
         config_profile = self.conf['profile']
 
         config_profile = os.environ.get('PARADE_PROFILE', config_profile)
 
-        raw_conf = self.load_internal(config_name, profile=config_profile)
+        raw_conf = merge_dict(self.load_internal(config_name, profile=config_profile), raw_conf)
         conf = copy.deepcopy(raw_conf)
         if self.conf.has('parser'):
             parser_driver = self.conf['parser']
