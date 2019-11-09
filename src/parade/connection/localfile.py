@@ -4,7 +4,7 @@ from ..connection import Connection
 import pandas as pd
 import os
 import datetime
-from pandas.compat import cPickle as pkl
+from pandas.compat import pickle_compat as pkl
 
 
 class LocalFile(Connection):
@@ -37,8 +37,8 @@ class LocalFile(Connection):
         return export_io, table + '.' + str(suffix or export_type)
 
     def store(self, df, table, **kwargs):
-        target_path = self.datasource.db if self.datasource.db else '.'
-        export_type = self.datasource.protocol if self.datasource.protocol else 'json'
+        target_path = self.settings.db if self.settings.db else '.'
+        export_type = self.settings.protocol if self.settings.protocol else 'json'
         if_exists = kwargs.get('if_exists', 'replace')
 
         os.makedirs(target_path, exist_ok=True)

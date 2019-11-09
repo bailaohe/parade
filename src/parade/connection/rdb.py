@@ -12,17 +12,17 @@ class RDBConnection(Connection):
         Plugin.__init__(self)
 
     def open(self):
-        uri = self.datasource.uri
+        uri = self.settings.uri
         if uri is None:
             authen = None
-            uripart = self.datasource.host + ':' + str(self.datasource.port) + '/' + self.datasource.db
-            if self.datasource.user is not None:
-                authen = self.datasource.user
-            if authen is not None and self.datasource.password is not None:
-                authen += ':' + self.datasource.password
+            uripart = self.settings.host + ':' + str(self.settings.port) + '/' + self.settings.db
+            if self.settings.user is not None:
+                authen = self.settings.user
+            if authen is not None and self.settings.password is not None:
+                authen += ':' + self.settings.password
             if authen is not None:
                 uripart = authen + '@' + uripart
-            uri = self.datasource.protocol + '://' + uripart + '?charset=utf8'
+            uri = self.settings.protocol + '://' + uripart + '?charset=utf8'
         return create_engine(uri, encoding="utf-8", pool_size=16, pool_recycle=300)
 
     def load(self, table, **kwargs):

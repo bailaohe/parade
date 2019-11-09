@@ -1,5 +1,8 @@
 connection:
   # name of the connection
+  hogwarts:
+    ds: mysql-dev
+    db: hogwarts
   rdb-conn:
     driver: rdb
     protocol: postgresql

@@ -1,8 +1,9 @@
+import copy
 from collections import defaultdict
 
 from .recorder import ParadeRecorder
 from ..config import ConfigStore, ConfigEntry
-from ..connection import Connection, Datasource
+from ..connection import Connection, ConnConf
 from ..core.task import Task
 from ..error.task_errors import DuplicatedTaskExistError
 from ..flowrunner import FlowRunner
@@ -10,6 +11,7 @@ from ..flowstore import FlowStore
 from ..notify import Notifier
 from ..utils.log import parade_logger as logger
 from ..utils.modutils import get_class, iter_classes
+from ..utils.misc import merge_dict
 
 
 class Context(object):
@@ -24,7 +26,7 @@ class Context(object):
         self.workdir = workspace_settings['path']
 
         self._task_dict = defaultdict(Task)
-        self._ds_dict = defaultdict(Datasource)
+        self._ds_dict = defaultdict(ConnConf)
 
         self._conn_cache = defaultdict(Connection)
         self._notifier = None
@@ -82,10 +84,19 @@ class Context(object):
         :return: the connection instance
         """
 
+        def populate_conn_conf(conn_conf, conf):
+            conf_dict = conn_conf.to_dict()
+            if conn_conf.has('ds'):
+                conf_dict = copy.deepcopy(conn_conf.to_dict())
+                ds_conf = conf.get_or_else('datasource.' + str(conn_conf['ds']), None)
+                if ds_conf:
+                    conf_dict = merge_dict(ds_conf.to_dict(), conf_dict)
+            return ConfigEntry(conf_dict)
+
         if conn_key not in self._conn_cache:
             conn_conf = self.conf['connection']
             assert conn_conf.has(conn_key), 'connection {} is not configured'.format(conn_key)
-            self._conn_cache[conn_key] = self._load_plugin('connection', Connection, plugin_key=conn_key)
+            self._conn_cache[conn_key] = self._load_plugin('connection', Connection, plugin_key=conn_key, conf_func=populate_conn_conf)
 
         return self._conn_cache[conn_key]
 
@@ -139,7 +150,7 @@ class Context(object):
         if not self._configstore:
             self._configstore = self._load_plugin('config', ConfigStore)
 
-    def _load_plugin(self, plugin_token, plugin_class, plugin_key=None, provided_conf: ConfigEntry = None):
+    def _load_plugin(self, plugin_token, plugin_class, plugin_key=None, provided_conf: ConfigEntry = None, conf_func=None):
         """
         Load the plugin instance
         :param plugin_token: the plugin token
@@ -152,6 +163,8 @@ class Context(object):
 
         if conf.has(plugin_token):
             plugin_conf = conf[plugin_token][plugin_key] if plugin_key else conf[plugin_token]
+            if conf_func:
+                plugin_conf = conf_func(plugin_conf, conf)
             assert plugin_conf.has('driver'), 'no driver provided in {} section'.format(plugin_token)
             driver = plugin_conf['driver']
         else:
