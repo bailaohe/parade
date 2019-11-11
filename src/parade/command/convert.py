@@ -11,13 +11,15 @@ class ConvertCommand(ParadeCommand):
     The install command will install acontrib component into current workspace
     """
 
-    requires_workspace = True
+    requires_workspace = False
 
     def short_desc(self):
         return 'convert a source table to a target table'
 
     def config_parser(self, parser):
-        parser.add_argument('-s', '--source', dest='source', help='the source table [conn_key:table_name]')
+        parser.add_argument('-s', '--source', dest='source', help='the source to extract data, format in'
+                                                                  'conn_key:table_name,'
+                                                                  'ds_key/db_name:table_name')
         parser.add_argument('-t', '--target', dest='target', help='set target table [conn_key:table_name]')
 
     def run_internal(self, context, **kwargs):
