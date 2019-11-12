@@ -1,5 +1,8 @@
 import copy
+import os
 from collections import defaultdict
+from pathlib import Path
+import yaml as yamllib
 
 from .recorder import ParadeRecorder
 from ..config import ConfigStore, ConfigEntry
@@ -19,12 +22,7 @@ class Context(object):
     The executor context to support the ETL job executed by the engine
     """
 
-    def __init__(self, bootstrap):
-        workspace_settings = bootstrap['workspace']
-
-        self.name = workspace_settings['name']
-        self.workdir = workspace_settings['path']
-
+    def __init__(self, bootstrap=None):
         self._task_dict = defaultdict(Task)
         self._ds_dict = defaultdict(ConnConf)
 
@@ -33,9 +31,21 @@ class Context(object):
         self._flowstore = None
         self._flowrunner = None
         self._configstore = None
-        self._init_configstore(bootstrap['config'])
+        self.name = None
 
-        self.conf = self._configstore.load()
+        default_config_file = os.path.join(Path.home(), '.config', 'parade', 'default.yml')
+        if os.path.exists(default_config_file):
+            with open(default_config_file, 'r') as f:
+                default_config_content = f.read()
+                self.conf = ConfigEntry(yamllib.load(default_config_content))
+
+        if bootstrap:
+            workspace_settings = bootstrap['workspace']
+            self.name = workspace_settings['name']
+            self.workdir = workspace_settings['path']
+            self._init_configstore(bootstrap['config'])
+            self.conf = self._configstore.load()
+
 
     def load_tasks(self, name=None, task_class=Task):
         """
@@ -77,6 +87,7 @@ class Context(object):
 
     # ====================Context as a connection store=======================
     # ========================================================================
+
     def get_connection(self, conn_key):
         """
         Get the connection with the connection key
@@ -94,8 +105,14 @@ class Context(object):
             return ConfigEntry(conf_dict)
 
         if conn_key not in self._conn_cache:
-            conn_conf = self.conf['connection']
-            assert conn_conf.has(conn_key), 'connection {} is not configured'.format(conn_key)
+            conn_conf = self.conf.get_or_else('connection', ConfigEntry())
+            if not conn_conf.has(conn_key):
+                if '/' in conn_key:
+                    (ds_key, db_name) = tuple(conn_key.split('/'))
+                    self.conf.put('connection.' + conn_key + '.ds', ds_key)
+                    self.conf.put('connection.' + conn_key + '.db', db_name)
+
+            # assert conn_conf.has(conn_key), 'connection {} is not configured'.format(conn_key)
             self._conn_cache[conn_key] = self._load_plugin('connection', Connection, plugin_key=conn_key, conf_func=populate_conn_conf)
 
         return self._conn_cache[conn_key]
@@ -161,6 +178,7 @@ class Context(object):
         """
         conf = provided_conf or self.conf
 
+        plugin_conf = ConfigEntry()
         if conf.has(plugin_token):
             plugin_conf = conf[plugin_token][plugin_key] if plugin_key else conf[plugin_token]
             if conf_func:
@@ -170,7 +188,11 @@ class Context(object):
         else:
             driver = 'default'
 
-        plugin_cls = get_class(driver, plugin_class, 'parade.' + plugin_token, self.name + '.contrib.' + plugin_token)
+        if self.name:
+            plugin_cls = get_class(driver, plugin_class, 'parade.' + plugin_token, self.name + '.contrib.' + plugin_token)
+        else:
+            plugin_cls = get_class(driver, plugin_class, 'parade.' + plugin_token)
+
         assert plugin_cls
         plugin = plugin_cls()
         plugin.initialize(self, plugin_conf)

@@ -73,6 +73,8 @@ def execute():
     if inworkspace and command.requires_workspace:
         bootstrap = load_bootstrap()
         context = Context(bootstrap)
+    else:
+        context = Context()
 
     return command.run(context, **command_args)
 
