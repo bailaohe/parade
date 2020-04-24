@@ -23,4 +23,4 @@ class YamlConfig(ConfigStore):
             uri = os.path.join(self.context.workdir, uri)
         with open(uri, 'r') as f:
             content = f.read()
-            return yaml.load(content)
+            return yaml.load(content, Loader=yaml.FullLoader)

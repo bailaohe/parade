@@ -31,7 +31,7 @@ def load_bootstrap(addpath=True):
         sys.path.append(workspace)
     with open(bootfile) as f:
         content = f.read()
-        config_dict = yaml.load(content)
+        config_dict = yaml.load(content, Loader=yaml.FullLoader)
         config_dict['workspace']['path'] = workspace
         return config_dict
     return []

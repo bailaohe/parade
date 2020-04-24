@@ -4,12 +4,11 @@ from ..connection import Connection
 import pandas as pd
 import os
 import datetime
-from pandas.compat import cPickle as pkl
-
+import pickle as pkl
 
 class LocalFile(Connection):
     @staticmethod
-    def export(df, table, export_type='excel', target_path=None, if_exists='replace', suffix=None):
+    def export(df: pd.DataFrame, table, export_type='excel', target_path=None, if_exists='replace', suffix=None):
         if target_path:
             if export_type == 'excel' and not suffix:
                 suffix = 'xlsx'
