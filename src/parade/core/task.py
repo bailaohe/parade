@@ -355,6 +355,9 @@ class ETLTask(Task):
         for index in indexes:
             assert isinstance(index, str) or isinstance(index, tuple), \
                 "target indexes can only be of type string or tuple"
+
+        kw = self.check_target()
+
         target_conn.store(target_df, self.target_table,
                           if_exists=self.target_mode,
                           chunksize=kwargs.get('chunksize', 10000),
@@ -363,7 +366,21 @@ class ETLTask(Task):
                           last_checkpoint=self._last_checkpoint,
                           checkpoint_column=self.target_checkpoint_column,
                           pkey=self.target_pkey,
-                          indexes=indexes)
+                          indexes=indexes,
+                          **kw)
+
+    def check_target(self):
+        """
+        自定义target属性, `target_%s`
+        """
+        kw = {}
+        exclude_attrs = [attr for attr in ETLTask.__dict__.keys() if attr.startswith('target_')]
+
+        for key in self.__class__.__dict__.keys():
+            if key.startswith('target_') and key not in exclude_attrs:
+                name = key.split('_', 1)[-1]
+                kw[name] = getattr(self, key)
+        return kw
 
 
 class SingleSourceETLTask(ETLTask):
