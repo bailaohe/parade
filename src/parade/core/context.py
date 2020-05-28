@@ -234,7 +234,7 @@ class Context(object):
             }, namespace='/exec', room=str(task.flow_id))
 
         if task.notify_fail and self.get_notifier() is not None:
-            self.get_notifier().notify_error(task.name, str(err), )
+            self.get_notifier().notify_error(task.name, str(err))
 
     def get_notifier(self):
         """
