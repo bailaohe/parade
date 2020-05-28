@@ -219,7 +219,7 @@ class Context(object):
             }, namespace='/exec', room=str(task.flow_id))
 
         if task.notify_success and self.get_notifier() is not None:
-            self.get_notifier().notify_success(self.name)
+            self.get_notifier().notify_success(task.name)
 
     def on_task_failed(self, task, err):
         self.sys_recorder.mark_task_failed(task.exec_id, err)
@@ -234,7 +234,7 @@ class Context(object):
             }, namespace='/exec', room=str(task.flow_id))
 
         if task.notify_fail and self.get_notifier() is not None:
-            self.get_notifier().notify_error(self.name, str(err))
+            self.get_notifier().notify_error(task.name, str(err), )
 
     def get_notifier(self):
         """
