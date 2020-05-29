@@ -356,7 +356,7 @@ class ETLTask(Task):
             assert isinstance(index, str) or isinstance(index, tuple), \
                 "target indexes can only be of type string or tuple"
 
-        kw = self.check_target()
+        kw = self._check_target()
 
         target_conn.store(target_df, self.target_table,
                           if_exists=self.target_mode,
@@ -369,7 +369,7 @@ class ETLTask(Task):
                           indexes=indexes,
                           **kw)
 
-    def check_target(self):
+    def _check_target(self):
         """
         自定义target属性, `target_%s`
         """
