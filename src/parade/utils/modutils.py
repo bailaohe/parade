@@ -60,7 +60,11 @@ def iter_classes(base_class, *modules, class_filter=None):
     :return:
     """
     for root_module in modules:
-        for module in walk_modules(root_module):
+        try:
+            module_repo = walk_modules(root_module)
+        except:
+            continue
+        for module in module_repo:
             for obj in vars(module).values():
                 if inspect.isclass(obj) and issubclass(obj, base_class) and obj.__module__ == module.__name__:
                     if not class_filter or class_filter(obj):
