@@ -31,8 +31,8 @@ RUN apk add --no-cache --virtual .build-deps  \
         libxml2-dev \
         libxslt-dev \
     && pip --no-cache-dir install flask-ldap3-login \
-    && pip --no-cache-dir install python-consul \
     && pip --no-cache-dir install jira \
+    && pip --no-cache-dir install arrow \
     && apk del .build-deps
 
 ENV PARADE_WORKSPACE="/workspace"
@@ -44,4 +44,4 @@ WORKDIR /
 
 EXPOSE 8888
 
-CMD ["parade", "server", "--enable-dash", "-p", "8888"]
+CMD ["parade", "server", "--enable-static", "--enable-dash", "-p", "8888"]
