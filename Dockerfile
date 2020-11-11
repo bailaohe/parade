@@ -28,7 +28,7 @@ RUN apk add --no-cache --virtual .build-deps  \
 	&& apk add --no-cache mariadb-dev \
 	&& apk add --no-cache subversion \
 	&& pip install --upgrade pip \
-	&& pip --no-cache-dir install parade[mysql,pg,mongo,redis,dash-server]==0.2.0.5 \
+	&& pip --no-cache-dir install parade[mysql,pg,mongo,redis,dash-server]==0.2.3 \
 	&& apk del .build-deps
 
 EXPOSE 5000
