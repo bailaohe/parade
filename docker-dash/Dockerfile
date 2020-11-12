@@ -33,6 +33,7 @@ RUN apk add --no-cache --virtual .build-deps  \
     && pip --no-cache-dir install flask-ldap3-login \
     && pip --no-cache-dir install jira \
     && pip --no-cache-dir install arrow \
+    && pip --no-cache-dir install cerberus \
     && apk del .build-deps
 
 ENV PARADE_WORKSPACE="/workspace"
