@@ -116,3 +116,7 @@ example-tmp/
 demo
 executing/
 cache-directory/
+
+src/parade/command/server.py
+xiaomai-devops-server
+
