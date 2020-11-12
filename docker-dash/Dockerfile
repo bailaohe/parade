@@ -34,6 +34,7 @@ RUN apk add --no-cache --virtual .build-deps  \
     && pip --no-cache-dir install jira \
     && pip --no-cache-dir install arrow \
     && pip --no-cache-dir install cerberus \
+    && pip --no-cache-dir install palettable \
     && apk del .build-deps
 
 ENV PARADE_WORKSPACE="/workspace"
