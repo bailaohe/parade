@@ -27,6 +27,10 @@ class Datasource(Plugin):
         return self.conf.get_or_else('password', None)
 
     @property
+    def driver(self):
+        return self.conf.get_or_else('driver', None)
+
+    @property
     def default_db(self):
         return self.conf.get_or_else('default_db', None)
 

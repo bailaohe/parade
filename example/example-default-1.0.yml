@@ -1,22 +1,27 @@
 connection:
-  # name of the datasource
   rdb-conn:
+    ds: rdb-ds
+    db: yourdb
+  elastic-conn:
+    ds: elastic-ds
+    db: example
+# name of the datasource
+datasource:
+  rdb-ds:
     driver: rdb
     protocol: postgresql
     host: 127.0.0.1
     port: 5432
     user: nameit
     password: changeme
-    db: yourdb
     uri: postgresql://nameit:changeme@127.0.0.1:5432/yourdb
-  elastic-conn:
+  elastic-ds:
     driver: elastic
     protocol: http
     host: 127.0.0.1
     port: 9200
     user: elastic
     password: changeme
-    db: example
     uri: http://elastic:changeme@127.0.0.1:9200/
 #flowstore:
 #  driver: default

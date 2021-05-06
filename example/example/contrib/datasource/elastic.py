@@ -2,31 +2,30 @@
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers
 import pandas as pd
-from parade.connection import Datasource, Connection
+from parade.datasource import Datasource, Connection
 
 
-class ElasticConnection(Connection):
-    def initialize(self, context, conf):
-        Connection.initialize(self, context, conf)
-        assert self.datasource.host is not None, 'host of datasource is required'
-        assert self.datasource.port is not None, 'port of datasource is required'
-        assert self.datasource.db is not None, 'db of datasource is required'
-        assert self.datasource.driver is not None and self.datasource.driver == 'elastic', 'driver mismatch'
+class ElasticDatasource(Datasource):
+    def initialize(self, context, conf, key):
+        Connection.initialize(self, context, conf, key)
+        assert self.host is not None, 'host of datasource is required'
+        assert self.port is not None, 'port of datasource is required'
+        assert self.driver is not None and self.driver == 'elastic', 'driver mismatch'
 
-    def open(self):
-        uri = self.datasource.uri
+    def open(self, db):
+        uri = self.uri
         if uri is None:
             authen = None
-            uripart = self.datasource.host + ':' + str(self.datasource.port) + '/' + self.datasource.db
-            if self.datasource.user is not None:
-                authen = self.datasource.user
-            if authen is not None and self.datasource.password is not None:
-                authen += ':' + self.datasource.password
+            uripart = self.host + ':' + str(self.port) + '/' + str(db or self.default_db)
+            if self.user is not None:
+                authen = self.user
+            if authen is not None and self.password is not None:
+                authen += ':' + self.password
             if authen is not None:
                 uripart = authen + '@' + uripart
             protocol = 'http'
-            if self.datasource.protocol is not None:
-                protocol = self.datasource.protocol
+            if self.protocol is not None:
+                protocol = self.protocol
             uri = protocol + '://' + uripart
 
         return Elasticsearch(uri)
@@ -45,14 +44,14 @@ class ElasticConnection(Connection):
 
             if df.index.name:
                 actions = [{
-                    "_index": self.datasource.db,
+                    "_index": self.db,
                     "_type": table,
                     "_id": record[df.index.name],
                     "_source": record
                 } for record in records]
             else:
                 actions = [{
-                    "_index": self.datasource.db,
+                    "_index": self.db,
                     "_type": table,
                     "_source": record
                 } for record in records]
