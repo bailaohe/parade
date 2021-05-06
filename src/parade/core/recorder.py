@@ -5,7 +5,7 @@ import datetime
 from sqlalchemy.sql import functions, Select
 
 from ..core.task import Task
-from ..connection.rdb import RDBConnection
+from ..datasource.rdb import RDBDatasource
 
 
 class ParadeRecorder(object):
@@ -43,12 +43,11 @@ class ParadeRecorder(object):
                         )
 
     def __init__(self, project, conn):
-        assert isinstance(conn, RDBConnection)
         self.conn = conn
         self.project = project
 
     def init_record_tables(self):
-        _conn = self.conn.open()
+        _conn = self.conn.datasource.open(None)
         if not self._task_table.exists(_conn):
             try:
                 self._task_table.create(_conn)

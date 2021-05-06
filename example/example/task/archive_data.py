@@ -7,7 +7,7 @@ class Db2Es(SingleSourceETLTask):
     @property
     def target_conn(self):
         """
-        the target connection to write the result
+        the target datasource to write the result
         :return:
         """
         return 'elastic-conn'

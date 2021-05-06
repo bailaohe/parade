@@ -20,8 +20,8 @@ class ParadeFlowRunner(FlowRunner):
     task_workers = ThreadPoolExecutor(thread_name_prefix='parade-task-worker-')
     concurrency = 8
 
-    def initialize(self, context, conf):
-        FlowRunner.initialize(self, context, conf)
+    def initialize(self, context, conf, key):
+        FlowRunner.initialize(self, context, conf, key)
 
     def submit(self, flow, flow_id=0, **kwargs):
         """

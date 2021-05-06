@@ -1,12 +1,13 @@
 from io import BytesIO
 
-from ..connection import Connection
+from ..datasource import Datasource
 import pandas as pd
 import os
 import datetime
 import pickle as pkl
 
-class LocalFile(Connection):
+
+class LocalFile(Datasource):
     @staticmethod
     def export(df: pd.DataFrame, table, export_type='excel', target_path=None, if_exists='replace', suffix=None):
         if target_path:
@@ -35,16 +36,16 @@ class LocalFile(Connection):
             raise NotImplementedError("export type {} is not supported".format(export_type))
         return export_io, table + '.' + str(suffix or export_type)
 
-    def store(self, df, table, **kwargs):
-        target_path = self.datasource.db if self.datasource.db else '.'
-        export_type = self.datasource.protocol if self.datasource.protocol else 'json'
+    def store(self, df, table, db, **kwargs):
+        target_path = db or self.default_db or '.'
+        export_type = self.protocol or 'json'
         if_exists = kwargs.get('if_exists', 'replace')
 
         os.makedirs(target_path, exist_ok=True)
         LocalFile.export(df, table, export_type=export_type, target_path=target_path, if_exists=if_exists)
 
-    def load_query(self, query, **kwargs):
+    def load_query(self, query, db, **kwargs):
         raise NotImplementedError
 
-    def load(self, table, **kwargs):
+    def load(self, table, db, **kwargs):
         raise NotImplementedError

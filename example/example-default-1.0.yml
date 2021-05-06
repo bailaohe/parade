@@ -1,5 +1,5 @@
 connection:
-  # name of the connection
+  # name of the datasource
   rdb-conn:
     driver: rdb
     protocol: postgresql

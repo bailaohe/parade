@@ -29,8 +29,8 @@ class ParadeFlowStore(FlowStore):
 
     flow_dir = None
 
-    def initialize(self, context, conf):
-        FlowStore.initialize(self, context, conf)
+    def initialize(self, context, conf, key):
+        FlowStore.initialize(self, context, conf, key)
         self.flow_dir = join(self.context.workdir, 'flows')
 
     def list(self):

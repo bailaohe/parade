@@ -1,7 +1,8 @@
 import copy
 
-from ..utils.modutils import get_class
 from ..core import Plugin
+from ..utils.modutils import get_class
+from ..utils import dictutils
 
 
 class ConfigEntry(object):
@@ -92,16 +93,20 @@ class ConfigStore(Plugin):
         import os
         config_name = self.conf['name']
         config_profile = self.conf['profile']
+        
+        default_conf = kwargs.get('default_config', dict())
+        conf = copy.deepcopy(default_conf)
 
         config_profile = os.environ.get('PARADE_PROFILE', config_profile)
+        repo_conf = self.load_internal(config_name, profile=config_profile)
 
-        raw_conf = self.load_internal(config_name, profile=config_profile)
-        conf = copy.deepcopy(raw_conf)
+        conf = dictutils.merge(repo_conf, conf)
+
         if self.conf.has('parser'):
             parser_driver = self.conf['parser']
             parser_cls = get_class(parser_driver, ConfigParser, self.context.name + '.contrib.config')
             config_parser = parser_cls()
-            conf = config_parser.parse(raw_conf, profile=config_profile)
+            conf = config_parser.parse(repo_conf, profile=config_profile)
 
         return ConfigEntry(conf)
 

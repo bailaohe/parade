@@ -4,7 +4,7 @@ import time
 
 import pandas as pd
 
-from ..connection import Connection
+from ..datasource import Connection
 from ..utils.log import logger
 from ..utils.timeutils import datetime_str_to_timestamp, timestamp_to_datetime
 
@@ -146,7 +146,7 @@ class Task(object):
         try:
             # run if
             # 1. task record is inited. or
-            # 2. checkpoint connection is not specified
+            # 2. checkpoint datasource is not specified
             if self._state == self.STATE_EXECUTING:
                 context.on_task_start(self)
                 self._result = self.execute_internal(context, **kwargs)
@@ -220,7 +220,7 @@ class ETLTask(Task):
         checkpoint_ts = now_ts - (now_ts - init_ts) % self.checkpoint_round
         self.set_attribute(self.ATTR_CHECKPOINT, timestamp_to_datetime(checkpoint_ts).strftime('%Y-%m-%d %H:%M:%S'))
 
-        last_record = context.sys_recorder.last_success_record(self.name)
+        last_record = context.sys_recorder.last_success_record(self.name) if context.sys_recorder else None
         if last_record:
             last_attrs = json.loads(last_record['attributes'])
             self.set_attribute(self.ATTR_LAST_CHECKPOINT, last_attrs[self.ATTR_CHECKPOINT])
@@ -254,7 +254,7 @@ class ETLTask(Task):
     @property
     def target_conn(self):
         """
-        the target connection to write the result
+        the target datasource to write the result
         :return:
         """
         raise NotImplementedError("The target is required")
@@ -387,10 +387,10 @@ class SingleSourceETLTask(ETLTask):
     @property
     def source_conn(self):
         """
-        the source connection to write the result
+        the source datasource to write the result
         :return:
         """
-        raise NotImplementedError("The source connection is required")
+        raise NotImplementedError("The source datasource is required")
 
     @property
     def source(self):

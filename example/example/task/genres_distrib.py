@@ -8,7 +8,7 @@ class GenresDistrib(SingleSourceETLTask):
     @property
     def target_conn(self):
         """
-        the target connection to write the result
+        the target datasource to write the result
         :return:
         """
         return 'rdb-conn'
@@ -29,7 +29,7 @@ class GenresDistrib(SingleSourceETLTask):
     @property
     def source_conn(self):
         """
-        the source connection to write the result
+        the source datasource to write the result
         :return:
         """
         return 'rdb-conn'

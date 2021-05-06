@@ -8,9 +8,9 @@ from parade.connection import Datasource, Connection
 class ElasticConnection(Connection):
     def initialize(self, context, conf):
         Connection.initialize(self, context, conf)
-        assert self.datasource.host is not None, 'host of connection is required'
-        assert self.datasource.port is not None, 'port of connection is required'
-        assert self.datasource.db is not None, 'db of connection is required'
+        assert self.datasource.host is not None, 'host of datasource is required'
+        assert self.datasource.port is not None, 'port of datasource is required'
+        assert self.datasource.db is not None, 'db of datasource is required'
         assert self.datasource.driver is not None and self.datasource.driver == 'elastic', 'driver mismatch'
 
     def open(self):

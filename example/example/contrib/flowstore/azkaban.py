@@ -16,8 +16,8 @@ class AzkabanDAGStore(FlowStore):
     project = None
     cmd = None
 
-    def initialize(self, context, conf):
-        FlowStore.initialize(self, context, conf)
+    def initialize(self, context, conf, key):
+        FlowStore.initialize(self, context, conf, key)
         self.host = self.conf['host']
         self.username = self.conf['username']
         self.password = self.conf['password']

@@ -1,8 +1,10 @@
 from collections import defaultdict
 
+import yaml
+
 from .recorder import ParadeRecorder
 from ..config import ConfigStore, ConfigEntry
-from ..connection import Connection
+from ..datasource import Connection, Datasource
 from ..core.task import Task
 from ..error.task_errors import DuplicatedTaskExistError
 from ..flowrunner import FlowRunner
@@ -24,6 +26,7 @@ class Context(object):
         self.workdir = workspace_settings['path']
 
         self._task_dict = defaultdict(Task)
+        self._datasource_cache = defaultdict(Datasource)
         self._conn_cache = defaultdict(Connection)
         self._notifier = None
         self._flowstore = None
@@ -34,8 +37,7 @@ class Context(object):
         self.conf = ConfigEntry({'config': config_settings})
 
         self._init_configstore()
-
-        self.conf = self._configstore.load()
+        self._reload_config()
 
     # ========================Context as a task store=========================
     # ========================================================================
@@ -71,35 +73,51 @@ class Context(object):
 
     # ========================================================================
 
-    # ====================Context as a connection store=======================
+    # ====================Context as a datasource store=======================
     # ========================================================================
+    def get_datasource(self, ds_key):
+        """
+        Get the datasource with the datasource key
+        :param ds_key: the key of the datasource
+        :return: the datasource instance
+        """
+
+        if ds_key not in self._datasource_cache:
+            ds_conf = self.conf['datasource']
+            assert ds_conf.has(ds_key), 'datasource {} is not configured'.format(ds_key)
+            self._datasource_cache[ds_key] = self._load_plugin('datasource', Datasource, plugin_key=ds_key)
+
+        return self._datasource_cache[ds_key]
+
     def get_connection(self, conn_key):
         """
-        Get the connection with the connection key
-        :param conn_key: the key of the connection
-        :return: the connection instance
+        Get the datasource with the datasource key
+        :param conn_key: the key of the datasource
+        :return: the datasource instance
         """
 
         if conn_key not in self._conn_cache:
             conn_conf = self.conf['connection']
             assert conn_conf.has(conn_key), 'connection {} is not configured'.format(conn_key)
-            self._conn_cache[conn_key] = self._load_plugin('connection', Connection, plugin_key=conn_key)
+            conn = Connection()
+            conn.initialize(self, conn_conf[conn_key], conn_key)
+            self._conn_cache[conn_key] = conn
 
         return self._conn_cache[conn_key]
 
     def load(self, table, conn=None, **kwargs):
         if not conn:
-            raise ValueError('connection not provided')
+            raise ValueError('datasource not provided')
         return self.get_connection(conn).load(table, **kwargs)
 
     def load_query(self, query, conn=None, **kwargs):
         if not conn:
-            raise ValueError('connection not provided')
+            raise ValueError('datasource not provided')
         return self.get_connection(conn).load_query(query, **kwargs)
 
     def store(self, df, table, conn=None, **kwargs):
         if not conn:
-            raise ValueError('connection not provided')
+            raise ValueError('datasource not provided')
         return self.get_connection(conn).store(df, table, **kwargs)
 
     # ========================================================================
@@ -132,7 +150,15 @@ class Context(object):
         if not self._configstore:
             self._configstore = self._load_plugin('config', ConfigStore)
 
-    def _load_plugin(self, plugin_token, plugin_class, plugin_key=None, default_conf=None):
+    def _reload_config(self):
+        from os.path import expanduser
+        home = expanduser("~")
+        with open(home + '/.config/parade/default.yml', 'r') as default_config_file:
+            default_conf = yaml.load(default_config_file, Loader=yaml.FullLoader)
+
+        self.conf = self._configstore.load(default_config=default_conf)
+
+    def _load_plugin(self, plugin_token, plugin_class, plugin_key=None, default_conf=None, package_name=None):
         conf = default_conf
 
         if self.conf.has(plugin_token):
@@ -142,10 +168,12 @@ class Context(object):
         else:
             driver = 'default'
 
-        plugin_cls = get_class(driver, plugin_class, 'parade.' + plugin_token, self.name + '.contrib.' + plugin_token)
+        plugin_package = package_name or plugin_token
+        plugin_cls = get_class(driver, plugin_class, 'parade.' + plugin_package,
+                               self.name + '.contrib.' + plugin_package)
         assert plugin_cls
         plugin = plugin_cls()
-        plugin.initialize(self, conf)
+        plugin.initialize(self, conf, plugin_key)
         return plugin
 
     # ========================================================================
@@ -153,7 +181,7 @@ class Context(object):
     @property
     def sys_recorder(self):
         """
-        Get the parade system connection
+        Get the parade system datasource
         :return:
         """
         if not self.conf.has('checkpoint.connection'):
@@ -163,27 +191,34 @@ class Context(object):
 
         try:
             return ParadeRecorder(self.name, conn)
-        except:
-            logger.warn('Parade recorder initialized failed!')
+        except Exception as e:
+            logger.exception('Parade recorder initialized failed!', e)
             return None
 
     def on_flow_start(self, flow):
-        # TODO maybe we should set the flow state to `pending` here
-        self.sys_recorder.init_record_tables()
-        return self.sys_recorder.create_flow_record(flow.name, flow.tasks)
+        if self.sys_recorder:
+            # TODO maybe we should set the flow state to `pending` here
+            self.sys_recorder.init_record_tables()
+            return self.sys_recorder.create_flow_record(flow.name, flow.tasks)
+        return 0
 
     def on_flow_success(self, flow_id):
-        self.sys_recorder.mark_flow_success(flow_id)
+        if self.sys_recorder:
+            self.sys_recorder.mark_flow_success(flow_id)
 
     def on_flow_failed(self, flow_id):
-        self.sys_recorder.mark_flow_failed(flow_id)
+        if self.sys_recorder:
+            self.sys_recorder.mark_flow_failed(flow_id)
 
     def on_task_pending(self, task, checkpoint, flow_id, flow):
-        self.sys_recorder.init_record_tables()
-        return self.sys_recorder.create_task_record(task, checkpoint, flow_id, flow)
+        if self.sys_recorder:
+            self.sys_recorder.init_record_tables()
+            return self.sys_recorder.create_task_record(task, checkpoint, flow_id, flow)
+        return 0
 
     def on_task_cancelled(self, task, failed_deps):
-        self.sys_recorder.mark_task_cancelled(task.exec_id, failed_deps)
+        if self.sys_recorder:
+            self.sys_recorder.mark_task_cancelled(task.exec_id, failed_deps)
 
         if hasattr(self, 'webapp') and 'socketio' in self.webapp.extensions:
             socketio = self.webapp.extensions['socketio']
@@ -195,7 +230,8 @@ class Context(object):
             }, namespace='/exec', room=str(task.flow_id))
 
     def on_task_start(self, task):
-        self.sys_recorder.mark_task_start(task.exec_id)
+        if self.sys_recorder:
+            self.sys_recorder.mark_task_start(task.exec_id)
 
         if hasattr(self, 'webapp') and 'socketio' in self.webapp.extensions:
             socketio = self.webapp.extensions['socketio']
@@ -207,7 +243,8 @@ class Context(object):
             }, namespace='/exec', room=str(task.flow_id))
 
     def on_task_success(self, task):
-        self.sys_recorder.mark_task_success(task.exec_id)
+        if self.sys_recorder:
+            self.sys_recorder.mark_task_success(task.exec_id)
 
         if hasattr(self, 'webapp') and 'socketio' in self.webapp.extensions:
             socketio = self.webapp.extensions['socketio']
@@ -222,7 +259,8 @@ class Context(object):
             self.get_notifier().notify_success(task.name)
 
     def on_task_failed(self, task, err):
-        self.sys_recorder.mark_task_failed(task.exec_id, err)
+        if self.sys_recorder:
+            self.sys_recorder.mark_task_failed(task.exec_id, err)
 
         if hasattr(self, 'webapp') and 'socketio' in self.webapp.extensions:
             socketio = self.webapp.extensions['socketio']

@@ -4,32 +4,32 @@ from sqlalchemy import create_engine, MetaData, Column, Table
 from sqlalchemy.exc import NoSuchTableError
 
 from parade.utils.log import parade_logger as logger
-from . import Connection
+from . import Datasource
 
 
-class RDBConnection(Connection):
+class RDBDatasource(Datasource):
     def __init__(self):
         Plugin.__init__(self)
 
-    def open(self):
-        uri = self.datasource.uri
+    def open(self, db):
+        uri = self.uri
         if uri is None:
             authen = None
-            uripart = self.datasource.host + ':' + str(self.datasource.port) + '/' + self.datasource.db
-            if self.datasource.user is not None:
-                authen = self.datasource.user
-            if authen is not None and self.datasource.password is not None:
-                authen += ':' + self.datasource.password
-            if authen is not None:
+            uripart = self.host + ':' + str(self.port) + '/' + str(db or self.default_db)
+            if self.user:
+                authen = self.user
+            if authen and self.password is not None:
+                authen += ':' + self.password
+            if authen:
                 uripart = authen + '@' + uripart
-            uri = self.datasource.protocol + '://' + uripart + '?charset=utf8'
+            uri = self.protocol + '://' + uripart + '?charset=utf8'
         return create_engine(uri, encoding="utf-8", pool_size=16, pool_recycle=300)
 
-    def load(self, table, **kwargs):
-        return self.load_query('select * from {}'.format(table))
+    def load(self, table, db,  **kwargs):
+        return self.load_query('select * from {}'.format(table), db, **kwargs)
 
-    def load_query(self, query, **kwargs):
-        conn = self.open()
+    def load_query(self, query, db, **kwargs):
+        conn = self.open(db)
         df = pd.read_sql_query(query, con=conn)
 
         logger.info("before memory: " + str(df.memory_usage(deep=True).sum() / 1024**2) + " MB")
@@ -51,7 +51,7 @@ class RDBConnection(Connection):
         logger.info("after memory: " + str(df.memory_usage(deep=True).sum() / 1024 ** 2) + " MB")
         return df
 
-    def store(self, df, table, **kwargs):
+    def store(self, df, table, db, **kwargs):
         assert isinstance(df, pd.DataFrame), "Invalid data type"
         if_exists = kwargs.get('if_exists', 'fail')
         chunksize = kwargs.get('chunksize', 10000)
@@ -61,7 +61,7 @@ class RDBConnection(Connection):
         checkpoint = kwargs.get('checkpoint')
         last_checkpoint = kwargs.get('last_checkpoint')
 
-        _conn = self.open()
+        _conn = self.open(db)
 
         try:
             if if_exists == 'append' or if_exists == 'update':
