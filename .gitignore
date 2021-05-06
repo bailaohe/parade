@@ -120,4 +120,5 @@ cache-directory/
 src/parade/command/server.py
 xiaomai-devops-server
 src/parade/command/notebook.py
+src/parade/command/lab.py
 src/parade/template/workspace/jupyter
