@@ -105,7 +105,7 @@ class Context(object):
 
         return self._conn_cache[conn_key]
 
-    def load(self, table, conn=None, ds=None, db=None, **kwargs):
+    def load(self, table, conn=None, ds=None, db=None, domain=None, **kwargs):
         """
         load the table data from a connection or datasource
         :param table: the table identifier
@@ -115,13 +115,15 @@ class Context(object):
         :param kwargs: other arguments
         :return: the loaded table data in frame or dict
         """
+        if domain:
+            pass
         if conn:
             return self.get_connection(conn).load(table, **kwargs)
         if ds:
             return self.get_datasource(ds).load(table, db, **kwargs)
         raise ValueError('no connection or datasource provided')
 
-    def load_query(self, query, conn=None, ds=None, db=None, **kwargs):
+    def load_query(self, query, conn=None, ds=None, db=None, domain=None, **kwargs):
         """
         load the query data from a connection or datasource
         :param query: the query to load data
@@ -131,6 +133,8 @@ class Context(object):
         :param kwargs: other arguments
         :return: the loaded query data in frame or dict
         """
+        if domain:
+            pass
         if conn:
             return self.get_connection(conn).load_query(query, **kwargs)
         if ds:
